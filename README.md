@@ -10,14 +10,46 @@ give you more tailored help the longer you use it. It runs on Claude.
 pip install -e .                 # installs the `wolf` command
 export ANTHROPIC_API_KEY=...     # or: ant auth login
 
-wolf                             # start talking; type 'bye' when you're done
+wolf serve                       # open WOLF in your browser (phone + desktop, with voice)
+wolf                             # or talk in the terminal; type 'bye' when you're done
 ```
+
+## The WOLF app (phone, desktop, voice)
+
+`wolf serve` starts WOLF as a web app and prints a private link. Open it, and you get:
+
+- **Chat** with replies that stream in as WOLF writes them. A small tag shows when WOLF
+  saved or checked something in its memory.
+- **Voice**: tap the mic and talk. Turn on the speaker icon and WOLF reads its replies
+  aloud. If you started with the mic, it listens again after answering, so you can go
+  back and forth hands-free.
+- **Memory**: see and search everything WOLF remembers, and delete anything with one tap.
+- **You**: WOLF's profile of you and a log of past conversations.
+- **New conversation** wraps up the current one: WOLF saves what it learned and writes a
+  journal line. Conversations left idle for 20 minutes, or open when you stop the server,
+  are saved the same way.
+
+**On your phone (same Wi-Fi):** run `wolf serve --host 0.0.0.0` and open the "your phone" link
+it prints. To install it like an app, use *Add to Home Screen* (iPhone: Share menu; Android:
+browser menu).
+
+**Voice on a phone needs https.** Browsers only allow the microphone on secure connections, and
+`localhost` counts as secure, so voice works on the computer running WOLF without setup.
+For a phone, the easiest option is [Tailscale](https://tailscale.com): install it on both
+devices, then run `wolf serve` and `tailscale serve 8765` and open the https link Tailscale
+gives you. This also lets you reach WOLF away from home. Or pass your own certificate with
+`wolf serve --cert cert.pem --key key.pem`.
+
+**Privacy:** the link contains an access token (stored in `~/.wolf/web_token`). Every request
+for your data needs it, so other people on your network can't read your memories. Don't share
+the link. To revoke it, delete that file and restart `wolf serve`.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `wolf` / `wolf chat` | Have a conversation |
+| `wolf serve` | Open the WOLF app (see above) |
+| `wolf` / `wolf chat` | Have a conversation in the terminal |
 | `wolf ask "..."` | Ask one question |
 | `wolf memory [words]` | See everything WOLF remembers, or search it |
 | `wolf forget m12` | Delete a memory |
@@ -64,6 +96,8 @@ This repo also contains a development assistant for working on WOLF itself:
 ```
 wolf/                 WOLF itself
   cli.py              `wolf` command
+  server.py           `wolf serve`: web app server + JSON/streaming API (standard library only)
+  web/                the app: index.html, app.js, style.css, PWA manifest, icon, service worker
   assistant.py        persona, memory tools, end-of-conversation reflection
   memory.py           file-based long-term memory (profile, memories, journal)
   loop.py             shared Claude agent loop (streaming, tools, fallbacks)

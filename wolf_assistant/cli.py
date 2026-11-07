@@ -71,6 +71,7 @@ def main(argv: list[str] | None = None) -> int:
     agent = WolfAgent(toolbox, model=args.model or DEFAULT_MODEL, effort=args.effort)
 
     try:
+        print()
         if args.cmd in TASKS:
             agent.ask(TASKS[args.cmd])
         elif args.cmd == "ask":
@@ -85,6 +86,7 @@ def main(argv: list[str] | None = None) -> int:
                 if q.lower() in {"exit", "quit", ":q"}:
                     break
                 if q:
+                    print()
                     agent.ask(q)
         print()
     except KeyboardInterrupt:

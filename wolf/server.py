@@ -1,0 +1,312 @@
+"""`wolf serve`: WOLF's web app (phone and desktop, with voice).
+
+Standard library only. Serves the single-page app from `wolf/web/` and a small JSON API.
+Every API call needs the access token kept in `$WOLF_HOME/web_token`; the static page
+itself contains no personal data.
+
+API (all require `Authorization: Bearer <token>`):
+  POST   /api/chat            {"conversation_id"?, "message"} -> text/event-stream
+                              events: start {conversation_id}, text {text}, tool {name},
+                                      done {}, error {message}
+  POST   /api/end             {"conversation_id"} -> {"summary"}   (reflect + journal)
+  GET    /api/memory?q=...    -> {"memories": [...]}
+  DELETE /api/memory/<id>     -> {"forgot": id}
+  GET    /api/profile         -> {"profile": markdown}
+  GET    /api/journal         -> {"journal": [lines]}
+"""
+
+from __future__ import annotations
+
+import hmac
+import json
+import mimetypes
+import secrets
+import socket
+import ssl
+import threading
+import time
+import uuid
+from dataclasses import asdict, dataclass, field
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from typing import Any, Callable
+from urllib.parse import parse_qs, urlparse
+
+from .assistant import build_wolf, now_stamp, reflect
+from .loop import AgentLoop
+from .memory import MemoryStore
+
+WEB_DIR = Path(__file__).parent / "web"
+IDLE_SECONDS = 20 * 60  # conversations idle this long are reflected on and closed
+MAX_MESSAGE_CHARS = 20_000
+STATIC = {"/": "index.html", "/index.html": "index.html", "/app.js": "app.js", "/style.css": "style.css",
+          "/manifest.webmanifest": "manifest.webmanifest", "/icon.svg": "icon.svg", "/sw.js": "sw.js"}
+
+
+def load_token(store: MemoryStore) -> str:
+    path = store.home / "web_token"
+    if path.exists() and path.read_text().strip():
+        return path.read_text().strip()
+    token = secrets.token_urlsafe(24)
+    path.write_text(token)
+    path.chmod(0o600)
+    return token
+
+
+@dataclass
+class Conversation:
+    agent: AgentLoop
+    last_active: float = field(default_factory=time.time)
+    started: bool = False
+
+
+class WolfApp:
+    """Holds conversations and memory; independent of HTTP so it can be tested directly."""
+
+    def __init__(self, store: MemoryStore, agent_factory: Callable[[], AgentLoop] | None = None,
+                 idle_seconds: int = IDLE_SECONDS):
+        self.store = store
+        self.agent_factory = agent_factory or (lambda: build_wolf(store, effort="medium"))
+        self.idle_seconds = idle_seconds
+        self.conversations: dict[str, Conversation] = {}
+        # One person, one WOLF: serialize model turns so memory files never race.
+        self.lock = threading.Lock()
+
+    def open(self, conversation_id: str | None) -> str:
+        """Return the id of an existing conversation, or start a new one."""
+        with self.lock:
+            if conversation_id and conversation_id in self.conversations:
+                return conversation_id
+            conv_id = uuid.uuid4().hex
+            self.conversations[conv_id] = Conversation(self.agent_factory())
+            return conv_id
+
+    def chat(self, conversation_id: str, message: str,
+             on_text: Callable[[str], None], on_tool: Callable[[str], None]) -> str:
+        with self.lock:
+            conv = self.conversations.get(conversation_id)
+            if conv is None:
+                raise KeyError("This conversation has ended. Start a new one.")
+            agent = conv.agent
+            agent.out = on_text
+            agent.on_tool = lambda name, _args: on_tool(name)
+            prompt = message if conv.started else now_stamp() + message
+            conv.started = True
+            try:
+                return agent.ask(prompt)
+            finally:
+                conv.last_active = time.time()
+
+    def end(self, conversation_id: str) -> str:
+        with self.lock:
+            conv = self.conversations.pop(conversation_id, None)
+            return reflect(conv.agent, self.store) if conv else ""
+
+    def sweep(self, now: float | None = None) -> int:
+        """Reflect on and close idle conversations. Returns how many were closed."""
+        now = now or time.time()
+        stale = [cid for cid, c in list(self.conversations.items()) if now - c.last_active > self.idle_seconds]
+        for cid in stale:
+            try:
+                self.end(cid)
+            except Exception:  # an API error must not kill the sweeper
+                self.conversations.pop(cid, None)
+        return len(stale)
+
+    def end_all(self) -> None:
+        for cid in list(self.conversations):
+            try:
+                self.end(cid)
+            except Exception:
+                pass
+
+
+def make_handler(app: WolfApp, token: str):
+    class Handler(BaseHTTPRequestHandler):
+        server_version = "WOLF"
+
+        def log_message(self, fmt, *args):  # keep the terminal quiet; no message content in logs
+            pass
+
+        # ---------- helpers ----------
+        def _json(self, status: int, payload: Any) -> None:
+            body = json.dumps(payload).encode()
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body)
+
+        def _authed(self) -> bool:
+            got = self.headers.get("Authorization", "")
+            if got.startswith("Bearer ") and hmac.compare_digest(got[7:].encode(), token.encode()):
+                return True
+            self._json(401, {"error": "Missing or wrong access token. Open the link `wolf serve` printed."})
+            return False
+
+        def _body(self) -> dict:
+            length = int(self.headers.get("Content-Length") or 0)
+            if length > 1_000_000:
+                raise ValueError("Request too large")
+            data = json.loads(self.rfile.read(length) or b"{}")
+            if not isinstance(data, dict):
+                raise ValueError("Expected a JSON object")
+            return data
+
+        # ---------- routes ----------
+        def do_GET(self):
+            url = urlparse(self.path)
+            if url.path in STATIC:
+                return self._static(STATIC[url.path])
+            if not url.path.startswith("/api/") or not self._authed():
+                return None if url.path.startswith("/api/") else self._json(404, {"error": "Not found"})
+            if url.path == "/api/memory":
+                q = parse_qs(url.query).get("q", [""])[0].strip()
+                mems = app.store.search(q, limit=500) if q else app.store.recent(10_000)
+                return self._json(200, {"memories": [asdict(m) for m in mems]})
+            if url.path == "/api/profile":
+                return self._json(200, {"profile": app.store.profile()})
+            if url.path == "/api/journal":
+                return self._json(200, {"journal": app.store.recent_journal(50)})
+            return self._json(404, {"error": "Not found"})
+
+        def do_DELETE(self):
+            url = urlparse(self.path)
+            if not self._authed():
+                return
+            if url.path.startswith("/api/memory/"):
+                mem_id = url.path.rsplit("/", 1)[-1]
+                with app.lock:
+                    try:
+                        app.store.forget(mem_id)
+                    except KeyError:
+                        return self._json(404, {"error": f"No memory {mem_id}"})
+                return self._json(200, {"forgot": mem_id})
+            return self._json(404, {"error": "Not found"})
+
+        def do_POST(self):
+            url = urlparse(self.path)
+            if not self._authed():
+                return
+            try:
+                body = self._body()
+            except (ValueError, json.JSONDecodeError) as e:
+                return self._json(400, {"error": str(e)})
+            if url.path == "/api/chat":
+                return self._chat(body)
+            if url.path == "/api/end":
+                try:
+                    return self._json(200, {"summary": app.end(str(body.get("conversation_id", "")))})
+                except Exception as e:
+                    return self._json(502, {"error": _friendly(e)})
+            return self._json(404, {"error": "Not found"})
+
+        def _chat(self, body: dict):
+            message = str(body.get("message", "")).strip()
+            if not message:
+                return self._json(400, {"error": "Empty message"})
+            if len(message) > MAX_MESSAGE_CHARS:
+                return self._json(400, {"error": "Message too long"})
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Accel-Buffering", "no")
+            self.end_headers()
+
+            def send(event: str, data: dict) -> None:
+                try:
+                    self.wfile.write(f"event: {event}\ndata: {json.dumps(data)}\n\n".encode())
+                    self.wfile.flush()
+                except (BrokenPipeError, ConnectionResetError):
+                    pass  # browser went away; keep the turn running so memory is still saved
+
+            conv_id = app.open(body.get("conversation_id") or None)
+            send("start", {"conversation_id": conv_id})
+            try:
+                app.chat(conv_id, message,
+                         on_text=lambda t: send("text", {"text": t}),
+                         on_tool=lambda name: send("tool", {"name": name}))
+                send("done", {})
+            except Exception as e:
+                send("error", {"message": _friendly(e)})
+
+        def _static(self, name: str):
+            path = WEB_DIR / name
+            data = path.read_bytes()
+            ctype = mimetypes.guess_type(name)[0] or "application/octet-stream"
+            if name.endswith(".webmanifest"):
+                ctype = "application/manifest+json"
+            self.send_response(200)
+            self.send_header("Content-Type", ctype + ("; charset=utf-8" if ctype.startswith("text/") or "javascript" in ctype else ""))
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Referrer-Policy", "no-referrer")
+            self.end_headers()
+            self.wfile.write(data)
+
+    return Handler
+
+
+def _friendly(e: Exception) -> str:
+    import anthropic
+
+    if isinstance(e, anthropic.AuthenticationError):
+        return "WOLF can't reach Claude: set ANTHROPIC_API_KEY (or run `ant auth login`) and restart `wolf serve`."
+    if isinstance(e, anthropic.RateLimitError):
+        return "Claude is rate-limiting requests right now. Try again in a minute."
+    if isinstance(e, anthropic.APIStatusError):
+        return f"Claude API error {e.status_code}: {e.message}"
+    if isinstance(e, anthropic.APIConnectionError):
+        return "Couldn't connect to Claude. Check your internet connection."
+    return f"{type(e).__name__}: {e}"
+
+
+def lan_ip() -> str | None:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("10.255.255.255", 1))
+            return s.getsockname()[0]
+    except OSError:
+        return None
+
+
+def serve(store: MemoryStore, host: str = "127.0.0.1", port: int = 8765,
+          certfile: str | None = None, keyfile: str | None = None) -> None:
+    app = WolfApp(store)
+    token = load_token(store)
+    httpd = ThreadingHTTPServer((host, port), make_handler(app, token))
+    scheme = "http"
+    if certfile:
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ctx.load_cert_chain(certfile, keyfile)
+        httpd.socket = ctx.wrap_socket(httpd.socket, server_side=True)
+        scheme = "https"
+
+    stop = threading.Event()
+
+    def sweeper():
+        while not stop.wait(60):
+            app.sweep()
+
+    threading.Thread(target=sweeper, daemon=True).start()
+
+    shown_host = "localhost" if host in ("127.0.0.1", "localhost") else host
+    print("WOLF is running. Open this link (it contains your private access token):\n")
+    if host in ("0.0.0.0", "::"):
+        ip = lan_ip()
+        print(f"  this computer:  {scheme}://localhost:{port}/?token={token}")
+        if ip:
+            print(f"  your phone:     {scheme}://{ip}:{port}/?token={token}   (same Wi-Fi)")
+    else:
+        print(f"  {scheme}://{shown_host}:{port}/?token={token}")
+    print("\nPress Ctrl+C to stop. Open conversations are saved to memory when you stop.")
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\nSaving open conversations...")
+    finally:
+        stop.set()
+        httpd.server_close()
+        app.end_all()

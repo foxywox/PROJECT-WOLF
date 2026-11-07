@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f6f5f2" media="(prefers-color-scheme: light)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="WOLF">
+  <meta name="referrer" content="no-referrer">
+  <title>WOLF</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icon.svg">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><img src="/icon.svg" alt="" width="26" height="26"><span>WOLF</span></div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-view="chat" aria-selected="true">Chat</button>
+      <button role="tab" data-view="memory" aria-selected="false">Memory</button>
+      <button role="tab" data-view="you" aria-selected="false">You</button>
+    </nav>
+    <button id="speak-toggle" class="icon-btn" aria-pressed="false" title="Read replies aloud" aria-label="Read replies aloud">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path class="waves" d="M16 8.5a4.5 4.5 0 0 1 0 7M18.5 6a8 8 0 0 1 0 12"/></svg>
+    </button>
+  </header>
+
+  <main>
+    <!-- Chat -->
+    <section id="view-chat" class="view active" aria-label="Chat">
+      <div id="messages" class="messages" aria-live="polite">
+        <div class="empty" id="chat-empty">
+          <img src="/icon.svg" alt="" width="56" height="56">
+          <h1>Hi, I'm WOLF.</h1>
+          <p>Tell me about your day, a goal, or something you're working on. I'll remember what matters and get more helpful over time.</p>
+        </div>
+      </div>
+      <div class="composer-wrap">
+        <div class="composer-actions">
+          <button id="new-chat" class="text-btn" type="button">New conversation</button>
+          <span id="status" class="status" role="status"></span>
+        </div>
+        <form id="composer" class="composer" autocomplete="off">
+          <button id="mic" class="icon-btn mic" type="button" title="Talk" aria-label="Talk to WOLF" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
+          </button>
+          <textarea id="input" rows="1" placeholder="Message WOLF" aria-label="Message WOLF" enterkeyhint="send"></textarea>
+          <button id="send" class="icon-btn send" type="submit" title="Send" aria-label="Send">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Memory -->
+    <section id="view-memory" class="view" aria-label="Memory">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>What WOLF remembers</h2>
+          <span id="mem-count" class="muted"></span>
+        </div>
+        <input id="mem-search" type="search" placeholder="Search memories" aria-label="Search memories">
+        <ul id="mem-list" class="mem-list"></ul>
+      </div>
+    </section>
+
+    <!-- You -->
+    <section id="view-you" class="view" aria-label="Your profile">
+      <div class="panel">
+        <h2>WOLF's picture of you</h2>
+        <div id="profile" class="md card"></div>
+        <h2>Recent conversations</h2>
+        <ul id="journal" class="journal"></ul>
+      </div>
+    </section>
+  </main>
+
+  <div id="locked" class="locked" hidden>
+    <img src="/icon.svg" alt="" width="56" height="56">
+    <h1>Open WOLF from your link</h1>
+    <p>For privacy, WOLF needs the link that <code>wolf serve</code> printed in your terminal (it ends in <code>?token=…</code>). Open that link once on this device and it will be remembered.</p>
+  </div>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+  <script src="/app.js"></script>
+</body>
+</html>

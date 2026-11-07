@@ -6,14 +6,13 @@
   wolf forget m12             delete a memory
   wolf profile                show WOLF's profile of you
   wolf journal                show recent conversation summaries
+  wolf serve                  open WOLF as a web app (phone + desktop, with voice)
 """
 
 from __future__ import annotations
 
 import argparse
 import sys
-from datetime import datetime
-
 from . import __version__
 from .memory import MemoryStore
 
@@ -35,6 +34,12 @@ def main(argv: list[str] | None = None) -> int:
     p_forget.add_argument("id")
     sub.add_parser("profile", help="Show your profile")
     sub.add_parser("journal", help="Show recent conversation summaries")
+    p_serve = sub.add_parser("serve", help="Run WOLF as a web app (phone + desktop, with voice)")
+    p_serve.add_argument("--host", default="127.0.0.1",
+                         help="Address to listen on; use 0.0.0.0 to reach WOLF from your phone on the same Wi-Fi")
+    p_serve.add_argument("--port", type=int, default=8765)
+    p_serve.add_argument("--cert", help="TLS certificate file (enables https, needed for voice on phones)")
+    p_serve.add_argument("--key", help="TLS private key file")
     args = ap.parse_args(argv)
 
     store = MemoryStore(args.home)
@@ -59,16 +64,23 @@ def main(argv: list[str] | None = None) -> int:
         print("\n".join(store.recent_journal(30)) or "(no conversations yet)")
         return 0
 
+    if cmd == "serve":
+        from .server import serve
+
+        serve(store, host=args.host, port=args.port, certfile=args.cert, keyfile=args.key)
+        return 0
+
     # ---- conversations ----
     import anthropic
 
-    from .assistant import build_wolf, reflect
+    from .assistant import build_wolf, now_stamp, reflect
     from .loop import DEFAULT_MODEL
 
     agent = build_wolf(store, web=not args.no_web, model=args.model or DEFAULT_MODEL, effort=args.effort)
-    stamp = f"[{datetime.now().strftime('%A %Y-%m-%d %H:%M')}] "  # kept out of the cached system prompt
+    stamp = now_stamp()
     try:
         if cmd == "ask":
+            print()
             agent.ask(stamp + " ".join(args.question))
         else:
             print("WOLF is listening. Type 'bye' to end (WOLF saves what it learned).")
@@ -81,6 +93,7 @@ def main(argv: list[str] | None = None) -> int:
                 if q.lower() in {"bye", "exit", "quit", ":q"}:
                     break
                 if q:
+                    print()
                     agent.ask((stamp if first else "") + q)
                     first = False
         print()

@@ -69,6 +69,7 @@ class AgentLoop:
         server_tools: list[dict[str, Any]] | None = None,
         client: anthropic.Anthropic | None = None,
         out: Callable[[str], None] | None = None,
+        on_tool: Callable[[str, Any], None] | None = None,
     ):
         self.toolbox = toolbox
         self.system = system  # frozen for the session so the prefix stays cached
@@ -77,6 +78,8 @@ class AgentLoop:
         self.server_tools = server_tools or []
         self.client = client or anthropic.Anthropic()
         self.out = out or (lambda s: (sys.stdout.write(s), sys.stdout.flush()))
+        # Called before each client tool runs; defaults to a one-line note on `out`.
+        self.on_tool = on_tool or (lambda name, args: self.out(f"\n  · {name}({_short(args)})\n"))
         self.messages: list[Any] = []
 
     def ask(self, prompt: str) -> str:
@@ -114,7 +117,7 @@ class AgentLoop:
 
             results = []
             for block in tool_uses:
-                self.out(f"\n  · {block.name}({_short(block.input)})\n")
+                self.on_tool(block.name, block.input)
                 try:
                     content, is_error = self.toolbox.call(block.name, block.input), False
                 except ToolError as e:
@@ -142,11 +145,7 @@ class AgentLoop:
             betas=["server-side-fallback-2026-07-01"],
             fallbacks="default",
         ) as stream:
-            started = False
             for text in stream.text_stream:
-                if not started:
-                    self.out("\n")
-                    started = True
                 self.out(text)
             return stream.get_final_message()
 

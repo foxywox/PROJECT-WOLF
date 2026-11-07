@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 from .loop import AgentLoop, ToolError, tool, validate
@@ -42,6 +43,11 @@ REFLECT_PROMPT = (
     "(remember / update_memory / update_profile). Then reply with only a one-sentence summary "
     "of this conversation for your journal."
 )
+
+
+def now_stamp() -> str:
+    """Date/time prefix for a conversation's first message (kept out of the cached system prompt)."""
+    return f"[{datetime.now().strftime('%A %Y-%m-%d %H:%M')}] "
 
 
 class MemoryTools:
