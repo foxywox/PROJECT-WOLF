@@ -1,7 +1,8 @@
 # PROJECT WOLF
 
-This repository is PROJECT WOLF. It ships with a built-in development assistant
-whose job is to help analyze and use WOLF.
+WOLF is the owner's personal AI assistant that learns along with them over time
+(`wolf/`, the `wolf` command). This repo also ships a development assistant for working
+on WOLF itself (`wolf_assistant/`, `.claude/`).
 
 ## Start here
 - Read `docs/wolf/KNOWLEDGE.md` first: it's the assistant's persistent memory of WOLF
@@ -17,10 +18,11 @@ than appending duplicates. Keep it short and factual, with `path:line` reference
 ## Assistant layout (not part of WOLF itself)
 - `.claude/agents/wolf.md`: the `wolf` subagent (deep analysis of WOLF)
 - `.claude/skills/wolf-*`: `/wolf-analyze`, `/wolf-explain`, `/wolf-plan`, `/wolf-learn`
-- `wolf_assistant/`: standalone `wolf` CLI built on the Claude API (works outside Claude Code)
-- `tests/test_wolf_assistant.py`: offline tests, run with `python3 -m pytest -q`
+- `wolf_assistant/`: `wolf-dev` CLI built on the Claude API (works outside Claude Code)
+- `tests/`: offline tests, run with `python3 -m pytest -q`
 
 ## Working rules
 - Ground answers in the code; cite `path:line`.
 - Match existing conventions; keep changes focused; say how to verify.
-- If WOLF has no code yet, help the owner define it and record decisions in the knowledge base.
+- Never commit personal data. WOLF's user memory lives in `~/.wolf/`; tests use temp dirs.
+- Record the owner's product decisions under `## Decisions` in the knowledge base.

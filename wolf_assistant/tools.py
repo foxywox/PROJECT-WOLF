@@ -13,15 +13,13 @@ import subprocess
 from pathlib import Path
 from typing import Any, Callable
 
+from wolf.loop import ToolError, tool as _tool, validate
+
 from .scanner import IGNORED_DIRS, scan
 
 MAX_READ_BYTES = 200_000
 MAX_OUTPUT_CHARS = 30_000
 KNOWLEDGE_FILE = Path("docs/wolf/KNOWLEDGE.md")
-
-
-class ToolError(Exception):
-    pass
 
 
 class Toolbox:
@@ -172,33 +170,9 @@ class Toolbox:
         spec = next((d for d in self.definitions() if d["name"] == name), None)
         if spec is None:
             raise ToolError(f"Unknown or disabled tool: {name}")
-        if not isinstance(args, dict):
-            raise ToolError("Tool input must be a JSON object")
-        missing = [k for k in spec["input_schema"].get("required", []) if k not in args]
-        if missing:
-            raise ToolError(f"Missing required argument(s): {', '.join(missing)}")
-        props = spec["input_schema"]["properties"]
-        for key, value in args.items():
-            if key not in props:
-                raise ToolError(f"Unexpected argument: {key}")
-            expected = props[key]["type"]
-            if expected == "string" and not isinstance(value, str):
-                raise ToolError(f"Argument '{key}' must be a string")
-            if expected == "integer" and (not isinstance(value, int) or isinstance(value, bool)):
-                raise ToolError(f"Argument '{key}' must be an integer")
+        validate(spec, args)
         return getattr(self, name)(**args)
 
-
-def _tool(name: str, description: str, props: dict, required: list[str] | None = None) -> dict:
-    return {
-        "name": name,
-        "description": description,
-        "input_schema": {"type": "object", "properties": props, "required": required or [],
-                         "additionalProperties": False},
-        # Stream large tool inputs (e.g. file contents) as they are generated; inputs are
-        # validated in Toolbox.call before anything runs.
-        "eager_input_streaming": True,
-    }
 
 
 __all__ = ["Toolbox", "ToolError", "IGNORED_DIRS"]

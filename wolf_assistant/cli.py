@@ -1,12 +1,12 @@
-"""`wolf` command-line entry point.
+"""`wolf-dev` command-line entry point (development assistant for this repo).
 
 Examples:
-  wolf map                      # offline repo map (no API call)
-  wolf analyze                  # full analysis, saved to the knowledge base
-  wolf ask "How does X work?"   # one question
-  wolf chat                     # interactive session
-  wolf learn                    # refresh the knowledge base
-  wolf review --allow-run       # review recent changes (uses git)
+  wolf-dev map                      # offline repo map (no API call)
+  wolf-dev analyze                  # full analysis, saved to the knowledge base
+  wolf-dev ask "How does X work?"   # one question
+  wolf-dev chat                     # interactive session
+  wolf-dev learn                    # refresh the knowledge base
+  wolf-dev review --allow-run       # review recent changes (uses git)
 """
 
 from __future__ import annotations
@@ -40,8 +40,8 @@ def _confirm(auto_yes: bool):
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(prog="wolf", description="PROJECT WOLF development assistant")
-    ap.add_argument("--version", action="version", version=f"wolf {__version__}")
+    ap = argparse.ArgumentParser(prog="wolf-dev", description="PROJECT WOLF development assistant")
+    ap.add_argument("--version", action="version", version=f"wolf-dev {__version__}")
     ap.add_argument("--root", default=None, help="Repository root (default: nearest git root)")
     ap.add_argument("--model", default=None, help="Claude model ID (default: claude-opus-5-5)")
     ap.add_argument("--effort", default="high", choices=["low", "medium", "high", "xhigh", "max"])
