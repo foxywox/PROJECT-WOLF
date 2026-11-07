@@ -13,6 +13,12 @@ API (all require `Authorization: Bearer <token>`):
   DELETE /api/memory/<id>     -> {"forgot": id}
   GET    /api/profile         -> {"profile": markdown}
   GET    /api/journal         -> {"journal": [lines]}
+  GET    /api/components      -> {"components": [{name, description, enabled}]}
+  POST   /api/components      {"name", "enabled": bool} -> same as GET (next conversation uses it)
+  GET    /api/hub             -> {"available", "progress", "plan", "threads"}   (Project tab)
+  GET    /api/hub/forum/<id>  -> one forum thread with all posts
+  POST   /api/hub/forum       {"title", "body", "author", "topic"?} -> new thread (posted as human)
+  POST   /api/hub/forum/<id>  {"body", "author"} -> thread with the reply added (posted as human)
 """
 
 from __future__ import annotations
@@ -35,7 +41,9 @@ from typing import Any, Callable
 from urllib.parse import parse_qs, urlparse
 
 from .assistant import build_wolf, finish_conversation, now_stamp
-from .config import NOT_SET_UP
+from . import hub
+from .components import available, enabled_names
+from .config import NOT_SET_UP, load_config, save_config
 from .loop import AgentLoop
 from .memory import MemoryStore
 
@@ -106,6 +114,30 @@ class WolfApp:
                 return agent.ask(prompt)
             finally:
                 conv.last_active = time.time()
+
+    def components(self) -> dict[str, Any]:
+        enabled = enabled_names(load_config(self.store.home))
+        return {"components": [{"name": n, "description": d, "enabled": n in enabled}
+                               for n, d in available(self.store.home).items()]}
+
+    def set_component(self, name: str, enabled: bool) -> dict[str, Any]:
+        """Turn an ability on or off. Conversations started after this use the new set."""
+        if name not in available(self.store.home):
+            raise ValueError(f"No ability named '{name}'")
+        config = load_config(self.store.home)
+        names = enabled_names(config)
+        if enabled and name not in names:
+            names.append(name)
+        if not enabled and name in names:
+            names.remove(name)
+        config["components"] = names
+        save_config(config, self.store.home)
+        return self.components()
+
+    def hub_overview(self) -> dict[str, Any]:
+        if hub.hub_dir() is None:
+            return {"available": False}
+        return {"available": True, "progress": hub.progress(), "plan": hub.plan(), "threads": hub.threads()}
 
     def end(self, conversation_id: str) -> str:
         with self.lock:
@@ -179,6 +211,12 @@ def make_handler(app: WolfApp, token: str):
                 return self._json(200, {"profile": app.store.profile()})
             if url.path == "/api/journal":
                 return self._json(200, {"journal": app.store.recent_journal(50)})
+            if url.path == "/api/components":
+                return self._json(200, app.components())
+            if url.path == "/api/hub":
+                return self._json(200, app.hub_overview())
+            if url.path.startswith("/api/hub/forum/"):
+                return self._hub_call(lambda: hub.thread(url.path.rsplit("/", 1)[-1]))
             return self._json(404, {"error": "Not found"})
 
         def do_DELETE(self):
@@ -210,7 +248,25 @@ def make_handler(app: WolfApp, token: str):
                     return self._json(200, {"summary": app.end(str(body.get("conversation_id", "")))})
                 except Exception as e:
                     return self._json(502, {"error": _friendly(e)})
+            if url.path == "/api/components":
+                try:
+                    return self._json(200, app.set_component(str(body.get("name", "")), bool(body.get("enabled"))))
+                except ValueError as e:
+                    return self._json(400, {"error": str(e)})
+            if url.path == "/api/hub/forum":
+                return self._hub_call(lambda: hub.new_thread(
+                    str(body.get("title", "")), str(body.get("body", "")),
+                    str(body.get("author", "")), "human", str(body.get("topic") or "") or None))
+            if url.path.startswith("/api/hub/forum/"):
+                return self._hub_call(lambda: hub.reply(
+                    url.path.rsplit("/", 1)[-1], str(body.get("body", "")), str(body.get("author", "")), "human"))
             return self._json(404, {"error": "Not found"})
+
+        def _hub_call(self, fn):
+            try:
+                return self._json(200, fn())
+            except hub.HubError as e:
+                return self._json(404 if str(e).startswith("No thread") else 400, {"error": str(e)})
 
         def _chat(self, body: dict):
             message = str(body.get("message", "")).strip()

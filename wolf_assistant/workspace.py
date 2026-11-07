@@ -11,6 +11,7 @@ The briefing is assembled from files that live in the repo, so it travels with t
   claude/TOOLS.md        tools and services Claude uses outside this repo
   claude/tools/          helper scripts (each starts with a one-line description)
   docs/wolf/KNOWLEDGE.md architecture, conventions, decisions, open questions
+  hub/                   the production plan and the research forum (shared with people)
 plus live facts: git state, the component list, the repo map, and (optionally) test results.
 """
 
@@ -33,10 +34,13 @@ How to work in this repo (read this first, every session):
 2. Work on the branch named in "Repository state". Run `python3 claude/tools/check.py` before
    committing; never push with failing checks.
 3. As you go, record durable facts in docs/wolf/KNOWLEDGE.md (replace stale text, don't append).
-4. Before you finish: add a changelog entry (`python3 -m wolf_assistant log "..."`), then
+4. Keep the production plan honest (`wolf-dev plan set ITEM STATUS`) and read the forum for
+   questions addressed to AI; answer with `wolf-dev forum reply`. Report build progress with
+   `python3 claude/tools/progress.py` (WOLF's Project tab shows it).
+5. Before you finish: add a changelog entry (`python3 -m wolf_assistant log "..."`), then
    rewrite claude/HANDOFF.md so the next session can start cold: what's done, what's next,
    what you'd do and why, and anything you're unsure of. Commit both with your work.
-5. This repository is public. Never commit personal data about the owner or anything learned
+6. This repository is public. Never commit personal data about the owner or anything learned
    from their accounts (email, files, chats). WOLF's memory of them lives in ~/.wolf only.
 """
 
@@ -133,6 +137,17 @@ def _components_summary() -> str:
         return f"(couldn't load components: {e})"
 
 
+def _hub_section(root: Path, which: str) -> str:
+    try:
+        from wolf import hub
+        folder = root / "hub"
+        if not folder.is_dir():
+            return "(no hub/ folder in this checkout)"
+        return hub.plan_text(folder) if which == "plan" else hub.forum_text(5, folder)
+    except Exception as e:
+        return f"(couldn't read the hub: {e})"
+
+
 def brief(root: Path, tests: bool = False, changelog_sessions: int = 3, tree_files: int = 120) -> str:
     """The full briefing a new Claude session reads to pick up where the last one stopped."""
     branch = _git(root, "rev-parse", "--abbrev-ref", "HEAD")
@@ -147,6 +162,8 @@ def brief(root: Path, tests: bool = False, changelog_sessions: int = 3, tree_fil
         ("Handoff from the previous session (claude/HANDOFF.md)", _read(ws(root) / "HANDOFF.md")),
         (f"Recent changelog (claude/CHANGELOG.md, last {changelog_sessions} days)", changelog),
         ("Knowledge base (docs/wolf/KNOWLEDGE.md)", _read(root / "docs/wolf/KNOWLEDGE.md")),
+        ("Production plan (hub/plan.json; `wolf-dev plan`)", _hub_section(root, "plan")),
+        ("Research forum, recent threads (hub/forum/; `wolf-dev forum`)", _hub_section(root, "forum")),
         ("Tools", "Scripts in claude/tools (run with `python3 -m wolf_assistant tools run NAME`):\n"
                   + tools + "\n\nOutside the repo (claude/TOOLS.md):\n" + _read(ws(root) / "TOOLS.md")),
         ("Repository state", f"Branch: {branch}\n\nUncommitted changes:\n{status}\n\nRecent commits:\n{log}\n\n"

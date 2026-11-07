@@ -3,12 +3,15 @@
 Usage: python3 claude/tools/ui_smoke.py [OUTPUT_DIR]
 Needs Node.js with Playwright (pre-installed in Claude Code's cloud sandbox). It starts
 `wolf serve` on a temporary memory folder with sample data, sends one chat message, opens
-every tab, then prints any page errors. Look at the PNGs it writes before shipping UI changes.
+every tab (including the Project tab, where it posts a test thread to a throwaway copy of
+the hub), then prints any page errors. Look at the PNGs it writes before shipping UI changes.
 """
 
 from __future__ import annotations
 
 import json
+import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -42,8 +45,15 @@ const { chromium, devices } = require('playwright');
     await p.waitForSelector(".msg.wolf .chip"); await p.screenshot({ path: `${dir}/${name}-chat.png` });
     await p.click('[data-view="memory"]'); await p.waitForSelector(".mem-list li");
     await p.screenshot({ path: `${dir}/${name}-memory.png` });
-    await p.click('[data-view="you"]'); await p.waitForSelector("#journal li");
+    await p.click('[data-view="you"]'); await p.waitForSelector("#abilities .switch");
     await p.screenshot({ path: `${dir}/${name}-you.png` });
+    await p.click('[data-view="project"]'); await p.waitForSelector("#plan details");
+    await p.screenshot({ path: `${dir}/${name}-project.png`, fullPage: false });
+    await p.click("#new-thread-btn");
+    await p.fill("#tf-title", "Smoke test thread"); await p.fill("#tf-body", "Posted by the UI smoke test.");
+    await p.fill("#tf-author", "Tester"); await p.click('#thread-form [type=submit]');
+    await p.waitForSelector("#posts li");
+    await p.screenshot({ path: `${dir}/${name}-thread.png` });
     await ctx.close();
   }
   console.log(JSON.stringify({ errors })); await b.close();
@@ -83,7 +93,11 @@ def main() -> int:
     out = Path(sys.argv[1] if len(sys.argv) > 1 else tempfile.mkdtemp(prefix="wolf-ui-")).resolve()
     out.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as home:
-        store = MemoryStore(home)
+        # A throwaway copy of the hub, so the test thread never lands in the real forum.
+        hub_copy = Path(home) / "hub"
+        shutil.copytree(ROOT / "hub", hub_copy)
+        os.environ["WOLF_HUB"] = str(hub_copy)
+        store = MemoryStore(Path(home) / "memory")
         store.add("Has a dog named Juno", ["pets"])
         store.update_profile("Goals", "- Run a half marathon in March")
         store.add_journal("Talked about getting back into running.")

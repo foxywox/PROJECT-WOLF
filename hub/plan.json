@@ -1,0 +1,234 @@
+{
+  "title": "WOLF production plan",
+  "updated": "2026-11-07",
+  "about": "Everything WOLF is and will be, in order. Status: done, active, next, later, idea. 'who' says whether the owner (human), Claude (claude), or either is needed.",
+  "phases": [
+    {
+      "id": "foundation",
+      "name": "1. Foundation",
+      "status": "done",
+      "goal": "A personal assistant that remembers you between conversations.",
+      "items": [
+        {
+          "id": "define-wolf",
+          "title": "Decide what WOLF is",
+          "status": "done",
+          "who": "human",
+          "note": "A personal AI assistant that learns along with its owner over time."
+        },
+        {
+          "id": "memory",
+          "title": "Long-term memory: profile, memories, journal",
+          "status": "done",
+          "who": "claude",
+          "note": "Plain, editable files in ~/.wolf, never in the project."
+        },
+        {
+          "id": "reflection",
+          "title": "Save what was learned at the end of each conversation",
+          "status": "done",
+          "who": "claude"
+        },
+        {
+          "id": "dev-assistant",
+          "title": "Development assistant for building WOLF",
+          "status": "done",
+          "who": "claude",
+          "note": "wolf-dev, Claude Code skills, knowledge base."
+        }
+      ]
+    },
+    {
+      "id": "talk-anywhere",
+      "name": "2. Talk to WOLF anywhere",
+      "status": "done",
+      "goal": "Use WOLF from a phone or computer, by typing or speaking.",
+      "items": [
+        {
+          "id": "web-app",
+          "title": "Web app for phone and desktop",
+          "status": "done",
+          "who": "claude"
+        },
+        {
+          "id": "voice",
+          "title": "Voice: speak to WOLF and hear replies",
+          "status": "done",
+          "who": "claude",
+          "note": "Needs https on phones (Tailscale or hosting)."
+        },
+        {
+          "id": "easy-start",
+          "title": "Double-click launchers and guided setup",
+          "status": "done",
+          "who": "claude"
+        },
+        {
+          "id": "host-ready",
+          "title": "Container for hosting online",
+          "status": "done",
+          "who": "claude"
+        }
+      ]
+    },
+    {
+      "id": "building-blocks",
+      "name": "3. Building blocks",
+      "status": "done",
+      "goal": "Make WOLF easy to extend, and make the project easy for people and AI to work on together.",
+      "items": [
+        {
+          "id": "components",
+          "title": "Swappable components (memory, web search, clock, your own)",
+          "status": "done",
+          "who": "claude"
+        },
+        {
+          "id": "claude-workspace",
+          "title": "Claude's workspace: handoffs, changelog, tools",
+          "status": "done",
+          "who": "claude"
+        },
+        {
+          "id": "project-hub",
+          "title": "Project hub: this plan, a research forum, build progress",
+          "status": "done",
+          "who": "claude"
+        },
+        {
+          "id": "friendly-ui",
+          "title": "Friendlier app: tab bar, suggestions, ability switches, help",
+          "status": "done",
+          "who": "claude"
+        }
+      ]
+    },
+    {
+      "id": "real-world",
+      "name": "4. Real-world check",
+      "status": "active",
+      "goal": "Confirm everything works on the owner's own devices with a real Claude key.",
+      "items": [
+        {
+          "id": "first-real-chat",
+          "title": "First real conversation with Claude",
+          "status": "next",
+          "who": "human",
+          "note": "Needs the owner's API key; Claude can't do this from the cloud sandbox."
+        },
+        {
+          "id": "windows-launcher",
+          "title": "Try the Windows launcher",
+          "status": "next",
+          "who": "human"
+        },
+        {
+          "id": "voice-on-device",
+          "title": "Try the microphone and spoken replies on a real device",
+          "status": "next",
+          "who": "human"
+        }
+      ]
+    },
+    {
+      "id": "personality",
+      "name": "5. Personality",
+      "status": "next",
+      "goal": "Give WOLF a character of its own instead of a generic assistant voice.",
+      "items": [
+        {
+          "id": "personality-spec",
+          "title": "Owner shares the personality (\"MONTY\")",
+          "status": "next",
+          "who": "human",
+          "note": "No MONTY file was found; waiting on the owner."
+        },
+        {
+          "id": "personality-component",
+          "title": "Make the personality a swappable setting",
+          "status": "later",
+          "who": "claude"
+        }
+      ]
+    },
+    {
+      "id": "learn-from-life",
+      "name": "6. Learn from your life",
+      "status": "later",
+      "goal": "WOLF learns from where the owner's life already lives, with permission.",
+      "items": [
+        {
+          "id": "calendar",
+          "title": "Calendar component (read-only first)",
+          "status": "later",
+          "who": "either",
+          "note": "Owner picks the calendar service."
+        },
+        {
+          "id": "email",
+          "title": "Email component",
+          "status": "later",
+          "who": "either"
+        },
+        {
+          "id": "notes-files",
+          "title": "Notes and files component",
+          "status": "later",
+          "who": "either"
+        }
+      ]
+    },
+    {
+      "id": "proactive",
+      "name": "7. Proactive help",
+      "status": "later",
+      "goal": "WOLF reaches out: reminders, check-ins, weekly goal reviews.",
+      "items": [
+        {
+          "id": "hosting-choice",
+          "title": "Pick where WOLF runs all the time",
+          "status": "later",
+          "who": "human"
+        },
+        {
+          "id": "reminders",
+          "title": "Reminders and check-ins",
+          "status": "later",
+          "who": "claude"
+        },
+        {
+          "id": "weekly-review",
+          "title": "Weekly goal review",
+          "status": "later",
+          "who": "claude"
+        }
+      ]
+    },
+    {
+      "id": "ideas",
+      "name": "Ideas (not scheduled)",
+      "status": "idea",
+      "goal": "Worth discussing in the forum before planning.",
+      "items": [
+        {
+          "id": "local-model",
+          "title": "Swappable model backend, including a local model",
+          "status": "idea",
+          "who": "either"
+        },
+        {
+          "id": "semantic-memory",
+          "title": "Smarter memory search once memory grows",
+          "status": "idea",
+          "who": "claude"
+        },
+        {
+          "id": "messaging",
+          "title": "Talk to WOLF from a messaging app",
+          "status": "idea",
+          "who": "either"
+        }
+      ]
+    }
+  ]
+}

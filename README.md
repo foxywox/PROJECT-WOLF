@@ -37,7 +37,12 @@ wolf                    # or talk right in the terminal; type 'bye' when you're 
   aloud. If you started with the mic, it listens again after answering, so you can go
   back and forth hands-free.
 - **Memory**: see and search everything WOLF remembers, and delete anything with one tap.
-- **You**: WOLF's profile of you and a log of past conversations.
+- **You**: WOLF's profile of you, switches for its abilities, a plain-language "How WOLF
+  works" guide, and a log of past conversations.
+- **Project**: how WOLF itself is being built. It shows the current build (a little wolf pup
+  runs toward the flag as work progresses), the whole production plan, and a research forum
+  where people and AI discuss ideas. The project is public, so forum posts are too once
+  they're committed.
 - **New conversation** wraps up the current one: WOLF saves what it learned and writes a
   journal line. Conversations left idle for 20 minutes, or open when you stop the server,
   are saved the same way.
@@ -107,7 +112,9 @@ Everything WOLF can do beyond talking is a component you can switch on or off:
 | `web_search` | Looks things up on the web |
 | `clock` | Knows the current date and time |
 
-`wolf components` lists them; `wolf components disable web_search` turns one off.
+Switch them on the **You** tab in the app, or with `wolf components` /
+`wolf components disable web_search` in a terminal. There's also `research` (off by default):
+it lets WOLF read the production plan and post in the research forum when you ask it to.
 
 **Add your own:** put a Python file in `~/.wolf/components/` with one class that extends
 `wolf.components.Component`, then `wolf components enable <filename>`. A component can give WOLF
@@ -143,6 +150,9 @@ This repo also contains a development assistant for working on WOLF itself:
 - From a terminal: `wolf-dev analyze`, `wolf-dev ask "..."`, `wolf-dev chat`
   (`--allow-write` / `--allow-run` to let it edit and test).
 - Developer knowledge base: `docs/wolf/KNOWLEDGE.md`.
+- Project hub: `hub/` holds the production plan (`plan.json`), the research forum
+  (`forum/`, one file per thread) and build progress. People use the Project tab; AI uses
+  `wolf-dev plan`, `wolf-dev forum` and the `research` component.
 - Claude's workspace: `claude/` (handoff, changelog, tools). `wolf-dev brief` prints everything
   a new Claude session needs; `wolf-dev log`, `wolf-dev tools`. Run all checks with
   `python3 claude/tools/check.py`.
@@ -152,6 +162,7 @@ This repo also contains a development assistant for working on WOLF itself:
 wolf/                 WOLF itself
   cli.py              `wolf` command
   server.py           `wolf serve`: web app server + JSON/streaming API (standard library only)
+  hub.py              the project hub: production plan, research forum, build progress
   web/                the app: index.html, app.js, style.css, PWA manifest, icon, service worker
   assistant.py        WOLF's personality; assembles the enabled components
   components/         swappable abilities: memory, web_search, clock (+ your own)
@@ -159,6 +170,7 @@ wolf/                 WOLF itself
   loop.py             shared Claude agent loop (streaming, tools, fallbacks)
 wolf_assistant/       `wolf-dev` development assistant (repo scanner, sandboxed tools, briefing)
 claude/               Claude's workspace: handoff, changelog, tools catalog, helper scripts
+hub/                  production plan, research forum, build progress (shared by people and AI)
 .claude/              Claude Code subagent and skills for developing WOLF
 docs/wolf/            developer knowledge base
 tests/                offline tests

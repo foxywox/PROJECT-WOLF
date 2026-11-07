@@ -50,6 +50,21 @@ memory, and you can talk to it in a web app (`wolf serve`, phone + desktop, voic
   instructions; profile + up to 150 recent memories + last 10 journal lines as context; `on_end`
   = `reflect`). `web.py`: `web_search_20260209` server tool (`max_uses` setting, default 5).
   `clock.py`: `current_time` tool.
+- `wolf/hub.py` + `hub/`: project hub shared by people and AI. `plan.json` (phases -> items,
+  statuses done/active/next/later/idea, `who` human/claude/either; `plan()` adds a summary,
+  `set_item_status`, `plan_text`), `forum/<id>.json` (one file per thread; id =
+  `YYYY-MM-DD-<slug>`, posts `{author, kind: human|ai, body, time}`; validated lengths; ids
+  regex-checked so paths can't escape), `progress.json` (build tracker, written by
+  `claude/tools/progress.py`). `hub_dir()` = `$WOLF_HUB` or `<repo>/hub` (Docker sets
+  `WOLF_HUB=/app/hub`). Server: `GET /api/hub`, `GET|POST /api/hub/forum[/<id>]` (app posts are
+  always `kind: human`), `GET|POST /api/components` (ability switches). AI: `wolf-dev plan
+  [set]`, `wolf-dev forum [list|read|new|reply]` (kind `ai`, default author Claude), and the
+  `research` component (off by default; WOLF posts as "WOLF"). The briefing includes the plan
+  and the 5 most recent threads.
+- `wolf/web/`: tabs Chat / Memory / You / Project; header tabs on desktop, fixed bottom bar
+  under 640px (`--tabbar`). Chat welcome has suggestion buttons; failed messages get "Try
+  again". You tab: "How WOLF works", profile, ability switches, journal with Today/Yesterday.
+  Project tab polls `/api/hub` every 20 s while visible.
 - `claude/` + `wolf_assistant/workspace.py`: Claude's workspace. `brief()` assembles protocol,
   HANDOFF, last 3 changelog days, knowledge base, tools, git state, components, repo map
   (`--tests` adds test results). `add_log()` keeps CHANGELOG.md newest-day-first. Tools are
@@ -93,7 +108,10 @@ memory, and you can talk to it in a web app (`wolf serve`, phone + desktop, voic
   lacks, add a hook to `Component`.
 - New tools: define with `wolf.loop.tool(...)`; `Toolkit.call` validates inputs before running.
 - Before committing: `python3 claude/tools/check.py`. For UI changes also
-  `python3 claude/tools/ui_smoke.py OUTDIR` and look at the screenshots.
+  `python3 claude/tools/ui_smoke.py OUTDIR` and look at the screenshots (it uses a throwaway
+  copy of the hub).
+- A grid item with `position: fixed` still obeys `justify-self`; the phone tab bar needs
+  `justify-self: stretch` (a centered bar was caught in screenshots).
 - End of session: changelog entry + rewrite `claude/HANDOFF.md`.
 
 ## Decisions
@@ -104,6 +122,8 @@ memory, and you can talk to it in a web app (`wolf serve`, phone + desktop, voic
 - Default model `claude-opus-5-5`, effort `medium` for chat.
 - 2026-11-07: Every WOLF ability is a swappable component (owner asked for components
   "completely interchangeable with WOLF").
+- 2026-11-07: The Build Tracker lives in WOLF (Project tab), alongside the production plan
+  and a research forum for people and AI (owner's request). Forum posts are public files.
 - 2026-11-07: Claude keeps its own workspace in `claude/` (owner's request): handoffs,
   personal changelog, tools.
 - 2026-11-07: First interface beyond the terminal is a web app with voice that works on phone

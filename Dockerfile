@@ -10,12 +10,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     WOLF_HOME=/data \
     WOLF_HOST=0.0.0.0 \
-    PORT=8080
+    PORT=8080 \
+    WOLF_HUB=/app/hub
 
 WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY wolf ./wolf
 COPY wolf_assistant ./wolf_assistant
+COPY hub ./hub
 RUN pip install --no-cache-dir . && mkdir -p /data
 
 VOLUME ["/data"]

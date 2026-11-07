@@ -12,6 +12,14 @@ Claude's workspace (claude/), all offline:
   wolf-dev brief [--tests]          # everything a new Claude session needs to pick up the work
   wolf-dev log "what I did and why" # add to Claude's changelog (claude/CHANGELOG.md)
   wolf-dev tools [run NAME ...]     # list or run Claude's helper scripts (claude/tools/)
+
+Project hub (hub/), shared with people through WOLF's Project tab:
+  wolf-dev plan [set ITEM STATUS ["note"]]   # show the production plan, or update an item
+  wolf-dev forum                             # list threads
+  wolf-dev forum read THREAD_ID
+  wolf-dev forum new "Title" "Message" [--topic ITEM]
+  wolf-dev forum reply THREAD_ID "Message"
+  (posts are signed --as "Claude" by default and marked as AI)
 """
 
 from __future__ import annotations
@@ -45,6 +53,45 @@ def _confirm(auto_yes: bool):
     return ask
 
 
+def hub_command(args) -> int:
+    from wolf import hub
+
+    try:
+        if args.cmd == "plan":
+            if args.action == "set":
+                if not (args.item and args.status):
+                    print("Usage: wolf-dev plan set ITEM_ID STATUS [\"note\"]", file=sys.stderr)
+                    return 1
+                item = hub.set_item_status(args.item, args.status, args.note)
+                print(f"{item['title']}: {item['status']}")
+                return 0
+            print(hub.plan_text())
+            return 0
+        if args.action == "list":
+            for t in hub.threads():
+                print(f"{t['id']}\n   {t['title']}  ({t['replies']} replies, last: {t['last_author']}, "
+                      f"{t['last_time'][:16].replace('T', ' ')})")
+            return 0
+        if args.action == "read":
+            t = hub.thread(args.target or "")
+            print(f"{t['title']}" + (f"  [topic: {t['topic']}]" if t.get("topic") else "") + "\n")
+            for p in t["posts"]:
+                print(f"--- {p['author']} ({p['kind']}, {p['time'][:16].replace('T', ' ')})\n{p['body']}\n")
+            return 0
+        if not (args.target and args.message):
+            print("Give both a thread id (or title) and a message.", file=sys.stderr)
+            return 1
+        if args.action == "new":
+            t = hub.new_thread(args.target, args.message, args.author, "ai", args.topic)
+        else:
+            t = hub.reply(args.target, args.message, args.author, "ai")
+        print(f"Posted in '{t['title']}' ({t['id']}). Commit hub/ to share it.")
+        return 0
+    except hub.HubError as e:
+        print(str(e), file=sys.stderr)
+        return 1
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="wolf-dev", description="PROJECT WOLF development assistant")
     ap.add_argument("--version", action="version", version=f"wolf-dev {__version__}")
@@ -70,6 +117,17 @@ def main(argv: list[str] | None = None) -> int:
     p_tools.add_argument("action", nargs="?", choices=["list", "run"], default="list")
     p_tools.add_argument("name", nargs="?")
     p_tools.add_argument("args", nargs=argparse.REMAINDER)
+    p_plan = sub.add_parser("plan", help="Show WOLF's production plan, or set an item's status")
+    p_plan.add_argument("action", nargs="?", choices=["show", "set"], default="show")
+    p_plan.add_argument("item", nargs="?")
+    p_plan.add_argument("status", nargs="?")
+    p_plan.add_argument("note", nargs="?")
+    p_forum = sub.add_parser("forum", help="Read or post in the research forum (as AI)")
+    p_forum.add_argument("action", nargs="?", choices=["list", "read", "new", "reply"], default="list")
+    p_forum.add_argument("target", nargs="?", help="thread id (read/reply) or title (new)")
+    p_forum.add_argument("message", nargs="?")
+    p_forum.add_argument("--topic", help="plan item id the new thread is about")
+    p_forum.add_argument("--as", dest="author", default="Claude", help="name shown on the post")
     args = ap.parse_args(argv)
 
     root = Path(args.root).resolve() if args.root else _find_root(Path.cwd())
@@ -84,6 +142,8 @@ def main(argv: list[str] | None = None) -> int:
         day = workspace.add_log(root, " ".join(args.text))
         print(f"Logged under {day} in {workspace.WORKSPACE}/CHANGELOG.md")
         return 0
+    if args.cmd in ("plan", "forum"):
+        return hub_command(args)
     if args.cmd == "tools":
         if args.action == "run":
             if not args.name:

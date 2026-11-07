@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-11-07, end of the first build session. Rewrite this file at the end of
+Last updated: 2026-11-07, after the project-hub build. Rewrite this file at the end of
 every session; keep it under about two pages.
 
 ## Where things stand
@@ -13,9 +13,14 @@ code and tests:
   conversation.
 - **It's modular:** every ability is a component (`wolf/components/`). The built-ins are
   memory, web_search and clock. Add one by dropping a file in `~/.wolf/components/`.
+- **Project hub:** WOLF's app has a Project tab with the build tracker (wolf pup), the whole
+  production plan (`hub/plan.json`) and a research forum (`hub/forum/`) where people and AI
+  post. AI side: `wolf-dev plan`, `wolf-dev forum`, and the `research` component.
+- **Friendlier app:** bottom tab bar on phones, suggested first messages, ability switches,
+  a "How WOLF works" guide, retry on failures.
 - **Easy to start:** `start-wolf.command` / `start-wolf.bat` plus `wolf setup` (saves the API key).
 - **Ready to host:** a Dockerfile, verified in a container. The owner hasn't picked a host yet.
-- **Quality:** 51 offline tests; `python3 claude/tools/check.py` runs everything.
+- **Quality:** 66 offline tests; `python3 claude/tools/check.py` runs everything.
 
 **Never verified for real:** a live conversation with Claude (no API key in the sandbox), the
 microphone and speech on a real device, and the Windows launcher. If the owner reports a
@@ -23,13 +28,15 @@ problem, start there.
 
 ## What's next (owner's choice; ask if it isn't clear)
 
-Deferred phases, in the order I'd recommend:
+The production plan (`wolf-dev plan`) is now the source of truth for what's next; keep it
+honest with `wolf-dev plan set`. Check the forum (`wolf-dev forum`) for questions addressed
+to AI. As of now:
 
-1. **Learning from the owner's life:** calendar, email, notes. Each should be a component. A
-   read-only calendar component is the best first step: high value, low risk.
-2. **Proactive help:** reminders, check-ins, weekly goal reviews. Needs WOLF running
-   continuously (hosted, or the owner's computer left on) plus a way to reach the owner.
-3. **Hosting:** only when the owner wants WOLF without their computer on.
+1. **Real-world check (active, needs the owner):** first real chat, Windows launcher, voice.
+2. **Personality (waiting on the owner):** the forum thread "what should WOLF's personality
+   be?" is where that conversation should happen.
+3. **Learn from your life:** calendar first (read-only), then email and notes, each a component.
+4. **Proactive help and hosting:** later.
 
 ## What I think (the previous session's view)
 
@@ -45,6 +52,11 @@ Deferred phases, in the order I'd recommend:
   `wolf/assistant.py` (`SYSTEM_PROMPT`).
 - **Memory search is keyword-based.** Fine for hundreds of memories. Revisit (embeddings, or
   letting Claude rank candidates) when someone has real usage.
+- **The forum is public files.** Fine for a public research project, but if the owner ever
+  wants private discussion, the hub needs a private location (`WOLF_HUB` outside the repo).
+- **Hosted forum posts don't persist.** In the Docker image the hub is baked in at
+  `/app/hub`; posts made there vanish on redeploy. If WOLF gets hosted, point `WOLF_HUB` at
+  the `/data` volume and decide how posts get back into the repo.
 - **Risk:** reflection runs a model call at the end of every conversation, which costs a
   little each time. If the owner worries about cost, make reflection skip very short chats.
 

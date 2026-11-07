@@ -76,8 +76,27 @@ document.querySelectorAll(".tabs button").forEach((btn) => {
     document.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${btn.dataset.view}`));
     if (btn.dataset.view === "memory") loadMemory();
     if (btn.dataset.view === "you") loadYou();
+    if (btn.dataset.view === "project") loadProject(); else stopProjectRefresh();
   });
 });
+
+/* ---------- friendly dates ---------- */
+function dayLabel(date) {
+  const d = new Date(date), today = new Date();
+  const start = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((start(today) - start(d)) / 86400000);
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Yesterday";
+  if (diff < 7) return d.toLocaleDateString(undefined, { weekday: "long" });
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: d.getFullYear() === today.getFullYear() ? undefined : "numeric" });
+}
+function ago(date) {
+  const m = Math.round((Date.now() - new Date(date).getTime()) / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m} min ago`;
+  if (m < 60 * 24) return `${Math.round(m / 60)} h ago`;
+  return dayLabel(date);
+}
 
 /* ---------- chat ---------- */
 const messagesEl = $("#messages");
@@ -89,10 +108,23 @@ let busy = false;
 
 const TOOL_LABELS = {
   remember: "Saved to memory", recall: "Checked memory", update_memory: "Updated a memory",
-  forget: "Forgot something", update_profile: "Updated your profile",
+  forget: "Forgot something", update_profile: "Updated your profile", current_time: "Checked the time",
+  read_plan: "Read the project plan", list_forum: "Read the forum", read_thread: "Read a forum thread",
+  post_to_forum: "Posted in the forum",
 };
+const welcome = $("#chat-empty").cloneNode(true);
+function wireSuggestions(root) {
+  root.querySelectorAll("#suggestions button").forEach((b) => b.addEventListener("click", () => {
+    if (b.dataset.send) return send(b.dataset.send, false);
+    input.value = b.dataset.fill || "";
+    autosize();
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+  }));
+}
 
 function scrollDown() { messagesEl.scrollTop = messagesEl.scrollHeight; }
+const THINKING = '<div class="thinking"><span class="typing"><span></span><span></span><span></span></span>WOLF is thinking…</div>';
 
 function addMessage(role, text, chips = []) {
   $("#chat-empty")?.remove();
@@ -116,6 +148,7 @@ function addDivider(text) {
 function saveTranscript() { store.set("wolf.transcript", transcript.slice(-200)); }
 
 for (const m of transcript) m.role === "divider" ? addDivider(m.text) : addMessage(m.role, m.text, m.chips || []);
+wireSuggestions(document);
 
 function autosize() { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 160) + "px"; }
 input.addEventListener("input", autosize);
@@ -135,12 +168,12 @@ async function send(text, viaVoice) {
   input.value = "";
   autosize();
   stopSpeaking();
-  addMessage("user", text);
+  const userRow = addMessage("user", text).bubble.parentElement;
   transcript.push({ role: "user", text });
   saveTranscript();
 
   const { bubble, chipBox } = addMessage("wolf", "");
-  bubble.insertAdjacentHTML("afterbegin", '<div class="typing"><span></span><span></span><span></span></div>');
+  bubble.insertAdjacentHTML("afterbegin", THINKING);
   let reply = "";
   const chips = [];
   let failed = null;
@@ -152,7 +185,7 @@ async function send(text, viaVoice) {
     const decoder = new TextDecoder();
     let buf = "";
     const render = () => {
-      bubble.innerHTML = md(reply) || '<div class="typing"><span></span><span></span><span></span></div>';
+      bubble.innerHTML = md(reply) || THINKING;
       bubble.appendChild(chipBox);
       scrollDown();
     };
@@ -184,12 +217,22 @@ async function send(text, viaVoice) {
       }
     }
   } catch (err) {
-    if (err.message !== "locked") failed = navigator.onLine ? `Couldn't reach WOLF (${err.message}). Is \`wolf serve\` still running?` : "You're offline.";
+    if (err.message !== "locked") failed = navigator.onLine ? "Couldn't reach WOLF. Check that it's still running on your computer, then try again." : "You're offline. Reconnect, then try again.";
   }
 
   if (failed) {
     bubble.classList.add("error");
     bubble.textContent = failed;
+    const retry = Object.assign(document.createElement("button"), { className: "retry", type: "button", textContent: "Try again" });
+    retry.addEventListener("click", () => {
+      if (busy) return;
+      bubble.parentElement.remove();
+      userRow.remove();
+      transcript.pop();
+      saveTranscript();
+      send(text, viaVoice);
+    });
+    bubble.appendChild(retry);
   } else {
     bubble.innerHTML = md(reply.trim() || "…");
     bubble.appendChild(chipBox);
@@ -210,7 +253,9 @@ $("#new-chat").addEventListener("click", async () => {
   store.del("wolf.conversation");
   saveTranscript();
   messagesEl.innerHTML = "";
-  addDivider("New conversation");
+  const fresh = welcome.cloneNode(true);
+  messagesEl.appendChild(fresh);
+  wireSuggestions(fresh);
   if (!id) return;
   $("#status").textContent = "Saving what I learned…";
   try {
@@ -312,7 +357,7 @@ async function loadMemory() {
     for (const m of data.memories) {
       const li = document.createElement("li");
       const tags = m.tags.length ? ` · ${m.tags.join(", ")}` : "";
-      li.innerHTML = `<div class="text">${esc(m.text)}<div class="meta">${esc(new Date(m.updated).toLocaleDateString())}${esc(tags)}</div></div>
+      li.innerHTML = `<div class="text">${esc(m.text)}<div class="meta">${esc(dayLabel(m.updated))}${esc(tags)}</div></div>
         <button class="icon-btn forget" title="Forget" aria-label="Forget this memory">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button>`;
       li.querySelector(".forget").addEventListener("click", async () => {
@@ -329,18 +374,237 @@ async function loadMemory() {
 /* ---------- you ---------- */
 async function loadYou() {
   try {
-    const [p, j] = await Promise.all([api("/api/profile").then((r) => r.json()), api("/api/journal").then((r) => r.json())]);
+    const [p, j, c] = await Promise.all([
+      api("/api/profile").then((r) => r.json()),
+      api("/api/journal").then((r) => r.json()),
+      api("/api/components").then((r) => r.json()),
+    ]);
     $("#profile").innerHTML = p.profile.trim()
       ? md(p.profile.replace(/^# About me\s*/, ""))
-      : '<p class="muted">Empty for now. As you talk, WOLF builds a short profile of you here.</p>';
+      : '<p class="muted">Empty for now. As you talk, WOLF writes a short summary of what matters to you here.</p>';
+    renderAbilities(c.components || []);
     const jl = $("#journal");
     jl.innerHTML = "";
-    if (!j.journal.length) jl.innerHTML = '<li class="muted">No conversations yet.</li>';
+    if (!j.journal.length) jl.innerHTML = '<li class="muted">No conversations yet. Your first one will show up here.</li>';
     for (const line of j.journal.slice().reverse()) {
-      jl.appendChild(Object.assign(document.createElement("li"), { textContent: line.replace(/^- /, "") }));
+      const m = /^- (\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}): (.*)$/.exec(line);
+      const li = document.createElement("li");
+      const t = document.createElement("time");
+      t.textContent = m ? dayLabel(`${m[1]}T${m[2]}`) : "";
+      li.append(t, Object.assign(document.createElement("span"), { textContent: m ? m[3] : line.replace(/^- /, "") }));
+      jl.appendChild(li);
     }
   } catch (e) { if (e.message !== "locked") toast("Couldn't load your profile."); }
 }
+
+const ABILITY_NAMES = { memory: "Memory", web_search: "Web search", clock: "Date and time", research: "Project research" };
+function renderAbilities(list) {
+  const ul = $("#abilities");
+  ul.innerHTML = "";
+  for (const c of list) {
+    const li = document.createElement("li");
+    const text = document.createElement("div");
+    text.append(Object.assign(document.createElement("div"), { className: "name", textContent: ABILITY_NAMES[c.name] || c.name }),
+                Object.assign(document.createElement("div"), { className: "desc", textContent: c.description || "" }));
+    const sw = Object.assign(document.createElement("button"), { className: "switch", type: "button" });
+    sw.setAttribute("role", "switch");
+    sw.setAttribute("aria-checked", String(c.enabled));
+    sw.setAttribute("aria-label", ABILITY_NAMES[c.name] || c.name);
+    sw.addEventListener("click", async () => {
+      const on = sw.getAttribute("aria-checked") !== "true";
+      if (c.name === "memory" && !on) {
+        toast("Memory off: WOLF won't remember new things until you turn it back on. What it knows stays saved.", 5000);
+      }
+      sw.disabled = true;
+      try {
+        const res = await api("/api/components", { method: "POST", body: JSON.stringify({ name: c.name, enabled: on }) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        renderAbilities(data.components);
+        if (c.name !== "memory" || on) toast(`${ABILITY_NAMES[c.name] || c.name} is ${on ? "on" : "off"} from your next conversation.`, 2500);
+      } catch (e) { if (e.message !== "locked") toast("Couldn't change that. Try again."); sw.disabled = false; }
+    });
+    li.append(text, sw);
+    ul.appendChild(li);
+  }
+}
+
+/* ---------- project: build tracker, production plan, research forum ---------- */
+let projectTimer = null;
+let openThread = null;
+let planItems = [];
+const STATUS_LABEL = { done: "Done", active: "In progress", next: "Up next", later: "Later", idea: "Idea" };
+const WHO_LABEL = { human: "Needs you", claude: "Claude", either: "Anyone" };
+const el = (tag, cls, text) => Object.assign(document.createElement(tag), cls ? { className: cls } : {}, text != null ? { textContent: text } : {});
+
+function stopProjectRefresh() { clearInterval(projectTimer); projectTimer = null; }
+async function loadProject() {
+  try {
+    const data = await (await api("/api/hub")).json();
+    $("#hub-missing").hidden = data.available;
+    $("#hub").hidden = !data.available;
+    if (!data.available) return;
+    renderTracker(data.progress);
+    renderPlan(data.plan);
+    if (!openThread) renderThreads(data.threads);
+  } catch (e) { if (e.message !== "locked") toast("Couldn't load the project hub."); }
+  if (!projectTimer) projectTimer = setInterval(() => { if (!document.hidden) loadProject(); }, 20000);
+}
+
+function renderTracker(d) {
+  const scene = $("#scene");
+  if (!d) { $("#tracker-title").textContent = "No build in progress"; $("#tracker-now").textContent = ""; return; }
+  const pct = Math.max(0, Math.min(100, Math.round(Number(d.percent) || 0)));
+  const done = d.status === "done" || pct >= 100;
+  const asleep = !done && d.updated && Date.now() - d.updated > 20 * 60 * 1000;
+  $("#tracker-title").textContent = d.title || "Current build";
+  $("#tracker-pct").textContent = pct + "%";
+  $("#tracker-now").textContent = done ? "All done. Time to howl." : asleep ? "Paused. The pup is napping until work picks up again." : (d.current || "Working…");
+  const x = 12 + pct * 0.7;
+  $("#pup").style.left = x + "%"; $("#bubble").style.left = x + "%";
+  $("#trail").style.width = `calc(${x}% - 12px)`;
+  scene.classList.toggle("running", !done && !asleep);
+  scene.classList.toggle("done", done);
+  scene.classList.toggle("sleeping", !!asleep);
+  $("#bubble").hidden = !done;
+  $("#moon").style.transform = done ? "scale(1.25)" : "scale(1)";
+  scene.querySelectorAll(".zzz").forEach((z) => z.remove());
+  if (asleep) { const z = el("div", "zzz", "z z"); z.style.left = `calc(${x}% + 12px)`; scene.append(z); }
+  const steps = $("#tracker-steps");
+  steps.innerHTML = "";
+  for (const s of d.steps || []) {
+    const li = el("li", ["done", "active"].includes(s.state) ? s.state : "todo");
+    li.append(el("div", "dot"), el("span", null, s.label || ""));
+    steps.appendChild(li);
+  }
+  $("#tracker-updated").textContent = d.updated ? `Updated ${ago(d.updated)}` : "";
+}
+
+function renderPlan(plan) {
+  const s = plan.summary || { done: 0, items: 0, percent: 0 };
+  $("#plan-count").textContent = `${s.done} of ${s.items} done`;
+  $("#plan-meter").style.width = s.percent + "%";
+  $("#plan-about").textContent = "Everything WOLF is and will be, in order. Items marked \"Needs you\" are waiting on a person.";
+  const box = $("#plan");
+  const open = new Set([...box.querySelectorAll("details[open]")].map((d) => d.dataset.id));
+  const first = !box.children.length;
+  box.innerHTML = "";
+  planItems = [];
+  for (const phase of plan.phases || []) {
+    const items = phase.items || [];
+    const det = el("details", "phase");
+    det.dataset.id = phase.id;
+    det.open = first ? ["active", "next"].includes(phase.status) : open.has(phase.id);
+    const sum = el("summary");
+    sum.append(el("span", "pname", phase.name), el("span", "count", `${items.filter((i) => i.status === "done").length}/${items.length}`),
+               el("span", `pill ${phase.status}`, STATUS_LABEL[phase.status] || phase.status));
+    det.append(sum);
+    if (phase.goal) det.append(el("p", "goal", phase.goal));
+    const ul = el("ul", "items");
+    for (const item of items) {
+      planItems.push(item);
+      const li = el("li");
+      const tags = el("span", "tags");
+      if (item.who) tags.append(el("span", "who", WHO_LABEL[item.who] || item.who));
+      tags.append(el("span", `pill ${item.status}`, STATUS_LABEL[item.status] || item.status));
+      li.append(el("span", "title", item.title), tags);
+      if (item.note) li.append(el("span", "note", item.note));
+      ul.appendChild(li);
+    }
+    det.append(ul);
+    box.appendChild(det);
+  }
+  const sel = $("#tf-topic");
+  const current = sel.value;
+  sel.innerHTML = '<option value="">None</option>';
+  for (const i of planItems) sel.append(Object.assign(el("option", null, i.title), { value: i.id }));
+  sel.value = current;
+}
+
+function kindPill(kind) { return el("span", `pill ${kind === "ai" ? "ai" : "human"}`, kind === "ai" ? "AI" : "Person"); }
+function topicTitle(id) { return (planItems.find((i) => i.id === id) || {}).title || id; }
+
+function renderThreads(list) {
+  const ul = $("#threads");
+  ul.innerHTML = "";
+  if (!list.length) { ul.innerHTML = '<li class="muted">No threads yet. Start the first one.</li>'; return; }
+  for (const t of list) {
+    const b = el("button");
+    b.type = "button";
+    const meta = el("span", "t-meta");
+    meta.append(kindPill(t.started_kind), el("span", null, `${t.started_by} · ${t.replies} ${t.replies === 1 ? "reply" : "replies"} · active ${ago(t.last_time)}`));
+    if (t.topic) meta.append(el("span", "pill later", topicTitle(t.topic)));
+    b.append(el("span", "t-title", t.title), meta, el("span", "t-preview", t.preview));
+    b.addEventListener("click", () => showThread(t.id));
+    const li = el("li"); li.append(b); ul.appendChild(li);
+  }
+}
+
+async function showThread(id) {
+  try {
+    const res = await api(`/api/hub/forum/${encodeURIComponent(id)}`);
+    const t = await res.json();
+    if (!res.ok) throw new Error(t.error);
+    openThread = id;
+    $("#threads").hidden = true; $("#thread-form").hidden = true; $("#new-thread-btn").hidden = true;
+    $("#thread-view").hidden = false;
+    $("#thread-title").textContent = t.title;
+    $("#thread-topic").textContent = t.topic ? `Plan item: ${topicTitle(t.topic)}` : "";
+    const ol = $("#posts");
+    ol.innerHTML = "";
+    for (const p of t.posts) {
+      const li = el("li", p.kind === "ai" ? "ai" : "human");
+      const meta = el("div", "p-meta");
+      meta.append(el("span", "p-author", p.author), kindPill(p.kind), el("span", null, ago(p.time)));
+      const body = el("div", "p-body md"); body.innerHTML = md(p.body);
+      li.append(meta, body);
+      ol.appendChild(li);
+    }
+    $("#rf-author").value = store.get("wolf.author", "");
+  } catch (e) { if (e.message !== "locked") toast(e.message || "Couldn't open that thread."); }
+}
+function closeThread() {
+  openThread = null;
+  $("#thread-view").hidden = true; $("#threads").hidden = false; $("#new-thread-btn").hidden = false;
+  loadProject();
+}
+$("#thread-back").addEventListener("click", closeThread);
+$("#new-thread-btn").addEventListener("click", () => {
+  $("#thread-form").hidden = false;
+  $("#tf-author").value = store.get("wolf.author", "");
+  $("#tf-title").focus();
+});
+$("#tf-cancel").addEventListener("click", () => { $("#thread-form").hidden = true; });
+
+async function postForm(url, payload, form) {
+  const button = form.querySelector("[type=submit]");
+  button.disabled = true;
+  try {
+    const res = await api(url, { method: "POST", body: JSON.stringify(payload) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    store.set("wolf.author", payload.author);
+    return data;
+  } catch (e) { if (e.message !== "locked") toast(e.message || "Couldn't post that. Try again."); return null; }
+  finally { button.disabled = false; }
+}
+$("#thread-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const t = await postForm("/api/hub/forum", { title: $("#tf-title").value, body: $("#tf-body").value,
+    author: $("#tf-author").value, topic: $("#tf-topic").value }, e.target);
+  if (!t) return;
+  e.target.reset(); e.target.hidden = true;
+  toast("Thread posted");
+  showThread(t.id);
+});
+$("#reply-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const t = await postForm(`/api/hub/forum/${encodeURIComponent(openThread)}`,
+    { body: $("#rf-body").value, author: $("#rf-author").value }, e.target);
+  if (!t) return;
+  $("#rf-body").value = "";
+  showThread(t.id);
+});
 
 /* ---------- install / offline shell ---------- */
 if ("serviceWorker" in navigator && window.isSecureContext) {

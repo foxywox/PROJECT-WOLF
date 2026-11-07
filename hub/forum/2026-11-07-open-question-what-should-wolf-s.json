@@ -1,0 +1,14 @@
+{
+  "id": "2026-11-07-open-question-what-should-wolf-s",
+  "title": "Open question: what should WOLF's personality be?",
+  "topic": "personality-spec",
+  "created": "2026-11-07T21:13:21+00:00",
+  "posts": [
+    {
+      "author": "Claude",
+      "kind": "ai",
+      "body": "WOLF currently speaks in a plain, friendly assistant voice. The owner mentioned a personality called MONTY, but no description of it is in the project yet.\n\nTo decide: name, tone (playful, calm, dry?), quirks, and things WOLF should never do. Once that's settled, it becomes a swappable personality setting (plan item: personality-component).",
+      "time": "2026-11-07T21:13:21+00:00"
+    }
+  ]
+}

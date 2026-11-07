@@ -1,4 +1,4 @@
-"""Write the JSON for Claude's live progress window (see claude/TOOLS.md for how to publish it)."""
+"""Update build progress: WOLF's Project tab shows it, and claude/TOOLS.md says how to mirror it to the live window."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import json
 import time
 from pathlib import Path
 
-DEFAULT_OUT = Path(__file__).resolve().parents[1] / ".progress.json"  # git-ignored
+DEFAULT_OUT = Path(__file__).resolve().parents[2] / "hub" / "progress.json"  # shown in WOLF's Project tab
 
 
 def main() -> None:
