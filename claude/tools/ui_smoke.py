@@ -46,7 +46,11 @@ const { chromium, devices } = require('playwright');
     await p.click('[data-view="memory"]'); await p.waitForSelector(".mem-list li");
     await p.screenshot({ path: `${dir}/${name}-memory.png` });
     await p.click('[data-view="you"]'); await p.waitForSelector("#abilities .switch");
+    await p.waitForSelector("#personality .choice");
     await p.screenshot({ path: `${dir}/${name}-you.png` });
+    await p.screenshot({ path: `${dir}/${name}-you-full.png`, fullPage: true });
+    await p.click('[data-view="chat"]'); await p.waitForSelector("#due-banner .row");
+    await p.screenshot({ path: `${dir}/${name}-due.png` });
     await p.click('[data-view="project"]'); await p.waitForSelector("#plan details");
     await p.screenshot({ path: `${dir}/${name}-project.png`, fullPage: false });
     await p.click("#new-thread-btn");
@@ -101,6 +105,11 @@ def main() -> int:
         store.add("Has a dog named Juno", ["pets"])
         store.update_profile("Goals", "- Run a half marathon in March")
         store.add_journal("Talked about getting back into running.")
+        from datetime import datetime, timedelta
+        from wolf.components import calendar, reminders
+        reminders.add(store.home, "Stretch before the long run", (datetime.now() - timedelta(minutes=5)).isoformat(timespec="minutes"))
+        reminders.add(store.home, "Book a physio appointment", (datetime.now() + timedelta(days=2)).isoformat(timespec="minutes"))
+        calendar.add_calendar(store.home, "Training", str(ROOT / "tests" / "data" / "sample.ics"))
         client = FakeClaude()
         app = WolfApp(store, agent_factory=lambda: build_wolf(store, client=client, out=lambda s: None))
         httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(app, TOKEN))

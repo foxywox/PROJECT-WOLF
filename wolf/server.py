@@ -15,6 +15,13 @@ API (all require `Authorization: Bearer <token>`):
   GET    /api/journal         -> {"journal": [lines]}
   GET    /api/components      -> {"components": [{name, description, enabled}]}
   POST   /api/components      {"name", "enabled": bool} -> same as GET (next conversation uses it)
+  GET    /api/personality     -> {"current", "presets": [{id, name, summary}], "custom"}
+  POST   /api/personality     {"id", "custom"?} -> same as GET (next conversation uses it)
+  GET    /api/calendar        -> {"calendars": [{name, source}], "events": [...next 7 days], "how_to"}
+  POST   /api/calendar        {"name", "url"} -> checks the link, saves it, turns the calendar on
+  DELETE /api/calendar/<name> -> removes that calendar
+  GET    /api/reminders       -> {"due": [...], "open": [...]}
+  POST   /api/reminders       {"text", "due"} -> adds one;  POST /api/reminders/<id>/done
   GET    /api/hub             -> {"available", "progress", "plan", "threads"}   (Project tab)
   GET    /api/hub/forum/<id>  -> one forum thread with all posts
   POST   /api/hub/forum       {"title", "body", "author", "topic"?} -> new thread (posted as human)
@@ -34,15 +41,16 @@ import ssl
 import threading
 import time
 import uuid
+from datetime import datetime, timedelta
 from dataclasses import asdict, dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Callable
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 from .assistant import build_wolf, finish_conversation, now_stamp
-from . import hub
-from .components import available, enabled_names
+from . import hub, personality
+from .components import available, calendar, enabled_names, reminders
 from .config import NOT_SET_UP, load_config, save_config
 from .loop import AgentLoop
 from .memory import MemoryStore
@@ -134,6 +142,24 @@ class WolfApp:
         save_config(config, self.store.home)
         return self.components()
 
+    def calendar_overview(self) -> dict[str, Any]:
+        home = self.store.home
+        out: dict[str, Any] = {"calendars": calendar.public_list(home), "events": [], "how_to": calendar.HOW_TO}
+        if out["calendars"]:
+            start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            try:
+                evs = calendar.events(home, start, start + timedelta(days=7))
+                out["events"] = [{**e, "start": e["start"].isoformat(), "end": e["end"].isoformat() if e["end"] else None}
+                                 for e in evs[:20]]
+            except calendar.CalendarError as e:
+                out["error"] = str(e)
+        return out
+
+    def reminders_overview(self) -> dict[str, Any]:
+        home = self.store.home
+        return {"due": reminders.due(home),
+                "open": sorted((r for r in reminders.load(home) if not r.get("done")), key=lambda r: r["due"])}
+
     def hub_overview(self) -> dict[str, Any]:
         if hub.hub_dir() is None:
             return {"available": False}
@@ -213,6 +239,12 @@ def make_handler(app: WolfApp, token: str):
                 return self._json(200, {"journal": app.store.recent_journal(50)})
             if url.path == "/api/components":
                 return self._json(200, app.components())
+            if url.path == "/api/personality":
+                return self._json(200, personality.overview(app.store.home))
+            if url.path == "/api/calendar":
+                return self._json(200, app.calendar_overview())
+            if url.path == "/api/reminders":
+                return self._json(200, app.reminders_overview())
             if url.path == "/api/hub":
                 return self._json(200, app.hub_overview())
             if url.path.startswith("/api/hub/forum/"):
@@ -223,6 +255,12 @@ def make_handler(app: WolfApp, token: str):
             url = urlparse(self.path)
             if not self._authed():
                 return
+            if url.path.startswith("/api/calendar/"):
+                try:
+                    calendar.remove_calendar(app.store.home, unquote(url.path.split("/api/calendar/", 1)[1]))
+                except calendar.CalendarError as e:
+                    return self._json(404, {"error": str(e)})
+                return self._json(200, app.calendar_overview())
             if url.path.startswith("/api/memory/"):
                 mem_id = url.path.rsplit("/", 1)[-1]
                 with app.lock:
@@ -253,6 +291,33 @@ def make_handler(app: WolfApp, token: str):
                     return self._json(200, app.set_component(str(body.get("name", "")), bool(body.get("enabled"))))
                 except ValueError as e:
                     return self._json(400, {"error": str(e)})
+            if url.path == "/api/personality":
+                try:
+                    personality.choose(app.store.home, str(body.get("id", "")),
+                                       body.get("custom") if isinstance(body.get("custom"), str) else None)
+                    return self._json(200, personality.overview(app.store.home))
+                except ValueError as e:
+                    return self._json(400, {"error": str(e)})
+            if url.path == "/api/calendar":
+                try:
+                    count = calendar.add_calendar(app.store.home, str(body.get("name", "")), str(body.get("url", "")),
+                                                  allow_files=False)
+                except calendar.CalendarError as e:
+                    return self._json(400, {"error": str(e)})
+                app.set_component("calendar", True)
+                return self._json(200, {**app.calendar_overview(), "added_events": count})
+            if url.path == "/api/reminders":
+                try:
+                    reminders.add(app.store.home, str(body.get("text", "")), str(body.get("due", "")))
+                except reminders.ReminderError as e:
+                    return self._json(400, {"error": str(e)})
+                return self._json(200, app.reminders_overview())
+            if url.path.startswith("/api/reminders/") and url.path.endswith("/done"):
+                try:
+                    reminders.complete(app.store.home, url.path.split("/")[3])
+                except reminders.ReminderError as e:
+                    return self._json(404, {"error": str(e)})
+                return self._json(200, app.reminders_overview())
             if url.path == "/api/hub/forum":
                 return self._hub_call(lambda: hub.new_thread(
                     str(body.get("title", "")), str(body.get("body", "")),

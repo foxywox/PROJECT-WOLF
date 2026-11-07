@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-11-07, after the project-hub build. Rewrite this file at the end of
+Last updated: 2026-11-07, after the personality/calendar/reminders build. Rewrite this file at the end of
 every session; keep it under about two pages.
 
 ## Where things stand
@@ -16,11 +16,13 @@ code and tests:
 - **Project hub:** WOLF's app has a Project tab with the build tracker (wolf pup), the whole
   production plan (`hub/plan.json`) and a research forum (`hub/forum/`) where people and AI
   post. AI side: `wolf-dev plan`, `wolf-dev forum`, and the `research` component.
+- **Personal features:** personality setting (presets or the owner's own words), reminders
+  (due banner in chat), read-only calendar from any service's private iCal link.
 - **Friendlier app:** bottom tab bar on phones, suggested first messages, ability switches,
   a "How WOLF works" guide, retry on failures.
 - **Easy to start:** `start-wolf.command` / `start-wolf.bat` plus `wolf setup` (saves the API key).
 - **Ready to host:** a Dockerfile, verified in a container. The owner hasn't picked a host yet.
-- **Quality:** 66 offline tests; `python3 claude/tools/check.py` runs everything.
+- **Quality:** 79 offline tests; `python3 claude/tools/check.py` runs everything.
 
 **Never verified for real:** a live conversation with Claude (no API key in the sandbox), the
 microphone and speech on a real device, and the Windows launcher. If the owner reports a
@@ -33,10 +35,14 @@ honest with `wolf-dev plan set`. Check the forum (`wolf-dev forum`) for question
 to AI. As of now:
 
 1. **Real-world check (active, needs the owner):** first real chat, Windows launcher, voice.
-2. **Personality (waiting on the owner):** the forum thread "what should WOLF's personality
-   be?" is where that conversation should happen.
-3. **Learn from your life:** calendar first (read-only), then email and notes, each a component.
-4. **Proactive help and hosting:** later.
+2. **Personality content (waiting on the owner):** the setting exists; MONTY just needs
+   describing (You tab, "Your own"), or discussing in the forum thread.
+3. **Learn from your life:** calendar is done. Email and notes are next, each a component.
+   Email needs a decision on provider and access (IMAP app password vs OAuth); ask first.
+4. **Proactive help:** reminders exist, but WOLF can only surface them when the app is open
+   or a conversation starts. Real push (phone notifications, email, a messaging app) needs
+   WOLF running all the time, which waits on hosting. Weekly goal review could be a
+   reminders-style component next.
 
 ## What I think (the previous session's view)
 
@@ -57,8 +63,9 @@ to AI. As of now:
 - **Hosted forum posts don't persist.** In the Docker image the hub is baked in at
   `/app/hub`; posts made there vanish on redeploy. If WOLF gets hosted, point `WOLF_HUB` at
   the `/data` volume and decide how posts get back into the repo.
-- **Risk:** reflection runs a model call at the end of every conversation, which costs a
-  little each time. If the owner worries about cost, make reflection skip very short chats.
+- **Calendar links are secrets.** They're stored in `config.json` (owner-only) and never shown
+  back in full; keep it that way in any new UI or API.
+- **Risk (now reduced):** reflection is skipped for trivial chats, but still runs for every real conversation.
 
 ## How the owner likes to work
 

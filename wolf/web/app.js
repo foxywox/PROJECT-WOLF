@@ -7,6 +7,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode */ } },
   del(k) { try { localStorage.removeItem(k); } catch { /* ignore */ } },
 };
+const el = (tag, cls, text) => Object.assign(document.createElement(tag), cls ? { className: cls } : {}, text != null ? { textContent: text } : {});
 const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 function toast(msg, ms = 3500) {
@@ -110,7 +111,8 @@ const TOOL_LABELS = {
   remember: "Saved to memory", recall: "Checked memory", update_memory: "Updated a memory",
   forget: "Forgot something", update_profile: "Updated your profile", current_time: "Checked the time",
   read_plan: "Read the project plan", list_forum: "Read the forum", read_thread: "Read a forum thread",
-  post_to_forum: "Posted in the forum",
+  post_to_forum: "Posted in the forum", add_reminder: "Set a reminder", list_reminders: "Checked reminders",
+  complete_reminder: "Ticked off a reminder", calendar_events: "Checked your calendar",
 };
 const welcome = $("#chat-empty").cloneNode(true);
 function wireSuggestions(root) {
@@ -374,11 +376,17 @@ async function loadMemory() {
 /* ---------- you ---------- */
 async function loadYou() {
   try {
-    const [p, j, c] = await Promise.all([
+    const [p, j, c, per, rem, cal] = await Promise.all([
       api("/api/profile").then((r) => r.json()),
       api("/api/journal").then((r) => r.json()),
       api("/api/components").then((r) => r.json()),
+      api("/api/personality").then((r) => r.json()),
+      api("/api/reminders").then((r) => r.json()),
+      api("/api/calendar").then((r) => r.json()),
     ]);
+    renderPersonality(per);
+    renderReminders(rem);
+    renderCalendar(cal);
     $("#profile").innerHTML = p.profile.trim()
       ? md(p.profile.replace(/^# About me\s*/, ""))
       : '<p class="muted">Empty for now. As you talk, WOLF writes a short summary of what matters to you here.</p>';
@@ -397,7 +405,8 @@ async function loadYou() {
   } catch (e) { if (e.message !== "locked") toast("Couldn't load your profile."); }
 }
 
-const ABILITY_NAMES = { memory: "Memory", web_search: "Web search", clock: "Date and time", research: "Project research" };
+const ABILITY_NAMES = { memory: "Memory", web_search: "Web search", clock: "Date and time", reminders: "Reminders",
+  calendar: "Calendar", research: "Project research" };
 function renderAbilities(list) {
   const ul = $("#abilities");
   ul.innerHTML = "";
@@ -429,13 +438,157 @@ function renderAbilities(list) {
   }
 }
 
+/* ---------- personality ---------- */
+function renderPersonality(data) {
+  const form = $("#personality");
+  form.innerHTML = "";
+  const options = [...data.presets, { id: "custom", name: "Your own", summary: "Describe the personality you want, in your own words." }];
+  for (const o of options) {
+    const label = el("label", "choice");
+    const radio = Object.assign(document.createElement("input"), { type: "radio", name: "personality", value: o.id, checked: o.id === data.current });
+    const text = el("div");
+    text.append(el("div", "name", o.name), el("div", "desc", o.summary));
+    label.append(radio, text);
+    form.append(label);
+  }
+  const custom = Object.assign(document.createElement("textarea"), { id: "personality-custom", rows: 4, maxLength: 4000,
+    placeholder: "For example: \"Talk like a laid-back friend. Short sentences, a bit of humor, honest even when it stings.\"" });
+  custom.value = data.custom || "";
+  custom.setAttribute("aria-label", "Describe your own personality for WOLF");
+  const box = el("div"); box.append(custom); box.hidden = data.current !== "custom";
+  const actions = el("div", "form-actions");
+  const save = Object.assign(el("button", "pill-btn primary", "Save personality"), { type: "submit" });
+  actions.append(save);
+  form.append(box, actions);
+  form.onchange = () => { box.hidden = form.elements.personality.value !== "custom"; };
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const id = form.elements.personality.value;
+    save.disabled = true;
+    try {
+      const res = await api("/api/personality", { method: "POST", body: JSON.stringify({ id, custom: id === "custom" ? custom.value : undefined }) });
+      const out = await res.json();
+      if (!res.ok) throw new Error(out.error);
+      renderPersonality(out);
+      toast("Saved. WOLF will sound like this from your next conversation.");
+    } catch (err) { if (err.message !== "locked") toast(err.message || "Couldn't save that."); save.disabled = false; }
+  };
+}
+
+/* ---------- reminders ---------- */
+function whenText(iso) {
+  const d = new Date(iso);
+  return `${dayLabel(d)}, ${d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+}
+async function markDone(id) {
+  try {
+    const res = await api(`/api/reminders/${encodeURIComponent(id)}/done`, { method: "POST", body: "{}" });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    renderReminders(data);
+    renderDue(data.due);
+  } catch (e) { if (e.message !== "locked") toast("Couldn't update that reminder."); }
+}
+function renderReminders(data) {
+  const ul = $("#reminders");
+  ul.innerHTML = "";
+  if (!data.open.length) ul.append(el("li", "muted", "No reminders. Try telling WOLF \"remind me to call Mom on Sunday\"."));
+  const now = Date.now();
+  for (const r of data.open) {
+    const li = el("li", new Date(r.due).getTime() <= now ? "overdue" : "");
+    const done = Object.assign(el("button", "small-btn", "Done"), { type: "button" });
+    done.addEventListener("click", () => markDone(r.id));
+    li.append(el("span", null, r.text), el("span", "when", whenText(r.due)), done);
+    ul.append(li);
+  }
+}
+function renderDue(due) {
+  const box = $("#due-banner");
+  box.innerHTML = "";
+  box.hidden = !due.length;
+  for (const r of due) {
+    const row = el("div", "row");
+    const text = el("span");
+    text.append(el("b", null, "Reminder: "), document.createTextNode(`${r.text} (${whenText(r.due)})`));
+    const done = Object.assign(el("button", "small-btn", "Done"), { type: "button" });
+    done.addEventListener("click", () => markDone(r.id));
+    row.append(text, done);
+    box.append(row);
+  }
+}
+async function checkDue() {
+  if (!token()) return;
+  try { renderDue((await (await api("/api/reminders")).json()).due); } catch { /* shown next time */ }
+}
+checkDue();
+setInterval(() => { if (!document.hidden) checkDue(); }, 60000);
+(function presetReminderTime() {
+  const d = new Date(Date.now() + 60 * 60 * 1000);
+  d.setMinutes(0, 0, 0);
+  const pad = (n) => String(n).padStart(2, "0");
+  $("#rm-due").value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:00`;
+})();
+$("#reminder-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const data = await postForm("/api/reminders", { text: $("#rm-text").value, due: $("#rm-due").value }, e.target, false);
+  if (!data) return;
+  $("#rm-text").value = "";
+  renderReminders(data);
+  renderDue(data.due);
+  toast("Reminder added");
+});
+
+/* ---------- calendar ---------- */
+function renderCalendar(data) {
+  $("#cal-howto").textContent = data.how_to || "";
+  const ul = $("#calendars");
+  ul.innerHTML = "";
+  for (const c of data.calendars) {
+    const li = el("li");
+    const remove = Object.assign(el("button", "small-btn", "Remove"), { type: "button" });
+    remove.addEventListener("click", async () => {
+      try {
+        const res = await api(`/api/calendar/${encodeURIComponent(c.name)}`, { method: "DELETE" });
+        if (!res.ok) throw new Error((await res.json()).error);
+        renderCalendar(await res.json());
+        toast(`${c.name} disconnected`);
+      } catch (e) { if (e.message !== "locked") toast(e.message || "Couldn't remove it."); }
+    });
+    li.append(el("span", null, c.name), el("span", "when", c.source), remove);
+    ul.append(li);
+  }
+  const box = $("#cal-events");
+  box.innerHTML = "";
+  if (!data.calendars.length) { box.append(el("p", "hint", "No calendar connected yet.")); return; }
+  if (data.error) { box.append(el("p", "hint", data.error)); return; }
+  box.append(el("div", "eyebrow", "Next 7 days"));
+  if (!data.events.length) box.append(el("p", "hint", "Nothing scheduled."));
+  for (const ev of data.events.slice(0, 8)) {
+    const row = el("div", "event");
+    const when = ev.all_day ? `${dayLabel(ev.start)}, all day` : whenText(ev.start);
+    row.append(el("span", null, ev.title), el("span", "when", when));
+    box.append(row);
+  }
+}
+$("#calendar-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const button = e.target.querySelector("[type=submit]");
+  button.textContent = "Checking the link…";
+  const data = await postForm("/api/calendar", { name: $("#cal-name").value, url: $("#cal-url").value }, e.target, false);
+  button.textContent = "Connect calendar";
+  if (!data) return;
+  e.target.reset();
+  renderCalendar(data);
+  loadYou();
+  toast(`Connected. WOLF can now see ${data.added_events} events on that calendar.`);
+});
+
 /* ---------- project: build tracker, production plan, research forum ---------- */
 let projectTimer = null;
 let openThread = null;
 let planItems = [];
 const STATUS_LABEL = { done: "Done", active: "In progress", next: "Up next", later: "Later", idea: "Idea" };
 const WHO_LABEL = { human: "Needs you", claude: "Claude", either: "Anyone" };
-const el = (tag, cls, text) => Object.assign(document.createElement(tag), cls ? { className: cls } : {}, text != null ? { textContent: text } : {});
 
 function stopProjectRefresh() { clearInterval(projectTimer); projectTimer = null; }
 async function loadProject() {
@@ -576,14 +729,14 @@ $("#new-thread-btn").addEventListener("click", () => {
 });
 $("#tf-cancel").addEventListener("click", () => { $("#thread-form").hidden = true; });
 
-async function postForm(url, payload, form) {
+async function postForm(url, payload, form, rememberAuthor = true) {
   const button = form.querySelector("[type=submit]");
   button.disabled = true;
   try {
     const res = await api(url, { method: "POST", body: JSON.stringify(payload) });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
-    store.set("wolf.author", payload.author);
+    if (rememberAuthor) store.set("wolf.author", payload.author);
     return data;
   } catch (e) { if (e.message !== "locked") toast(e.message || "Couldn't post that. Try again."); return null; }
   finally { button.disabled = false; }

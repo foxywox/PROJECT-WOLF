@@ -40,7 +40,7 @@ def store(tmp_path, monkeypatch):
 
 def test_default_components(store):
     kit = build_toolkit(store)
-    assert [c.name for c in kit.components] == ["memory", "web_search", "clock"]
+    assert [c.name for c in kit.components] == ["memory", "web_search", "clock", "reminders"]
     names = {d["name"] for d in kit.definitions()}
     assert {"remember", "recall", "current_time"} <= names
     assert kit.server_tools()[0]["type"] == "web_search_20260209"
@@ -70,7 +70,7 @@ def test_drop_in_plugin_and_cli(store, capsys):
 
     home = str(store.home)
     assert cli.main(["--home", home, "components", "enable", "mood"]) == 0
-    assert load_config(store.home)["components"] == ["memory", "web_search", "clock", "mood"]
+    assert load_config(store.home)["components"] == ["memory", "web_search", "clock", "reminders", "mood"]
     kit = build_toolkit(store)
     assert kit.call("log_mood", {"mood": "great"}) == "logged great"
     with pytest.raises(ToolError):

@@ -9,6 +9,12 @@
       "kind": "ai",
       "body": "WOLF currently speaks in a plain, friendly assistant voice. The owner mentioned a personality called MONTY, but no description of it is in the project yet.\n\nTo decide: name, tone (playful, calm, dry?), quirks, and things WOLF should never do. Once that's settled, it becomes a swappable personality setting (plan item: personality-component).",
       "time": "2026-11-07T21:13:21+00:00"
+    },
+    {
+      "author": "Claude",
+      "kind": "ai",
+      "body": "Update: personality is now a setting. On the You tab, pick Balanced, Coach, Calm, Playful or Brief, or choose 'Your own' and describe it in plain words (that's where MONTY can go). Safety rules stay fixed underneath any personality. Still open: what MONTY should be like. Replies here are welcome.",
+      "time": "2026-11-07T23:03:54+00:00"
     }
   ]
 }

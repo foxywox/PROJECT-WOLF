@@ -125,7 +125,7 @@ def test_unknown_conversation_starts_new_one(server):
 
 
 def test_end_reflects_and_journals(server):
-    _, _, raw = _req(server, "/api/chat", "POST", {"message": "Juno!"})
+    _, _, raw = _req(server, "/api/chat", "POST", {"message": "I adopted a rescue dog named Juno this weekend!"})
     conv = _events(raw)[0][1]["conversation_id"]
     _, _, body = _req(server, "/api/end", "POST", {"conversation_id": conv})
     assert json.loads(body)["summary"] == "Chatted about Juno."
@@ -135,7 +135,7 @@ def test_end_reflects_and_journals(server):
 
 
 def test_idle_sweep_saves_conversation(server):
-    _, _, raw = _req(server, "/api/chat", "POST", {"message": "Juno!"})
+    _, _, raw = _req(server, "/api/chat", "POST", {"message": "I adopted a rescue dog named Juno this weekend!"})
     conv = _events(raw)[0][1]["conversation_id"]
     assert server.app.sweep(now=server.app.conversations[conv].last_active + 10) == 0
     assert server.app.sweep(now=server.app.conversations[conv].last_active + 99_999) == 1

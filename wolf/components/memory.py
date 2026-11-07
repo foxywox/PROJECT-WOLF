@@ -100,9 +100,30 @@ def memory_snapshot(store: MemoryStore, max_memories: int = 150) -> str:
             f"# Recent conversations\n\n{journal}")
 
 
+TRIVIAL_CHARS = 40
+
+
+def _user_words(agent: AgentLoop) -> list[str]:
+    """What the user actually typed (no date stamps, tool results or the reflection prompt)."""
+    out = []
+    for m in agent.messages:
+        if isinstance(m, dict) and m.get("role") == "user" and isinstance(m.get("content"), str):
+            text = m["content"]
+            if text.startswith("[WOLF end-of-conversation"):
+                continue
+            if text.startswith("[") and "] " in text[:40]:
+                text = text.split("] ", 1)[1]
+            out.append(text.strip())
+    return out
+
+
 def reflect(agent: AgentLoop, store: MemoryStore) -> str:
-    """End-of-conversation pass: save anything missed, then journal a one-line summary."""
+    """End-of-conversation pass: save anything missed, then journal a one-line summary.
+    Skipped for trivial chats (a single short message like "hi" or "thanks") to save cost."""
     if not any(m["role"] == "assistant" for m in agent.messages if isinstance(m, dict)):
+        return ""
+    said = _user_words(agent)
+    if len(said) <= 1 and sum(len(t) for t in said) < TRIVIAL_CHARS:
         return ""
     saved = agent.out, agent.on_tool
     agent.out = agent.on_tool = lambda *_a: None  # reflection runs silently

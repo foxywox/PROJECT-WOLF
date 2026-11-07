@@ -13,7 +13,8 @@ A component is a subclass of `Component` that may provide any of:
   on_end(agent)    a hook when a conversation ends (memory uses it to reflect and journal)
 
 Where components come from (first match wins):
-  1. built-ins:            "memory", "web_search", "clock", "research" (off by default)
+  1. built-ins:            "memory", "web_search", "clock", "reminders"; off by default:
+                           "calendar" (turns on when you connect one), "research"
   2. your plugin folder:   $WOLF_HOME/components/<name>.py  (any Component subclass inside)
   3. installed packages:   entry point group "wolf.components"
   4. an import path:       "package.module:ClassName"
@@ -43,8 +44,10 @@ BUILTINS: dict[str, str] = {
     "web_search": "wolf.components.web:WebSearchComponent",
     "clock": "wolf.components.clock:ClockComponent",
     "research": "wolf.components.research:ResearchComponent",
+    "calendar": "wolf.components.calendar:CalendarComponent",
+    "reminders": "wolf.components.reminders:RemindersComponent",
 }
-DEFAULT_COMPONENTS = ["memory", "web_search", "clock"]
+DEFAULT_COMPONENTS = ["memory", "web_search", "clock", "reminders"]
 ENTRY_POINT_GROUP = "wolf.components"
 
 

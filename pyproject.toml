@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "WOLF: a personal AI assistant that learns along with you over time."
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["anthropic>=2.6.0"]
+dependencies = ["anthropic>=2.6.0", "icalendar>=6", "recurring-ical-events>=3"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]

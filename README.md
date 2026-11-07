@@ -37,8 +37,13 @@ wolf                    # or talk right in the terminal; type 'bye' when you're 
   aloud. If you started with the mic, it listens again after answering, so you can go
   back and forth hands-free.
 - **Memory**: see and search everything WOLF remembers, and delete anything with one tap.
-- **You**: WOLF's profile of you, switches for its abilities, a plain-language "How WOLF
-  works" guide, and a log of past conversations.
+- **You**: WOLF's profile of you, its **personality** (Balanced, Coach, Calm, Playful, Brief,
+  or your own words), your **reminders**, your **calendar**, switches for its abilities, a
+  plain-language "How WOLF works" guide, and a log of past conversations.
+- **Reminders**: say "remind me to…" and WOLF sets one. Due reminders show at the top of the
+  chat with a Done button, and WOLF brings them up when you next talk.
+- **Calendar**: connect any calendar (Google, Outlook, Apple) with its private calendar link,
+  and WOLF can see your schedule. It can't change anything.
 - **Project**: how WOLF itself is being built. It shows the current build (a little wolf pup
   runs toward the flag as work progresses), the whole production plan, and a research forum
   where people and AI discuss ideas. The project is public, so forum posts are too once
@@ -68,6 +73,7 @@ the link. To revoke it, delete that file and restart `wolf serve`.
 |---|---|
 | `wolf setup` | Connect WOLF to Claude (paste your API key once) |
 | `wolf components` | See WOLF's abilities; `enable`/`disable NAME` to switch them |
+| `wolf personality` | See or `set` WOLF's personality (`set custom` uses `~/.wolf/personality.md`) |
 | `wolf serve` | Run the WOLF app (`--open` opens your browser) |
 | `wolf` / `wolf chat` | Have a conversation in the terminal |
 | `wolf ask "..."` | Ask one question |
@@ -97,6 +103,7 @@ your user account:
 
 - `profile.md`: WOLF's summary of you
 - `memories.jsonl`: individual memories
+- `reminders.json`, `personality.md`, `config.json` (settings, your API key and calendar links)
 - `journal.md`: one line per conversation
 
 It is **never** stored in this repository. WOLF won't save passwords, keys, account numbers,
@@ -111,6 +118,8 @@ Everything WOLF can do beyond talking is a component you can switch on or off:
 | `memory` | Remembers you across conversations (profile, memories, journal) |
 | `web_search` | Looks things up on the web |
 | `clock` | Knows the current date and time |
+| `reminders` | Sets reminders and brings them up when due |
+| `calendar` | Reads your calendar (turns on when you connect one) |
 
 Switch them on the **You** tab in the app, or with `wolf components` /
 `wolf components disable web_search` in a terminal. There's also `research` (off by default):
@@ -163,9 +172,11 @@ wolf/                 WOLF itself
   cli.py              `wolf` command
   server.py           `wolf serve`: web app server + JSON/streaming API (standard library only)
   hub.py              the project hub: production plan, research forum, build progress
+  personality.py      personality presets and your own
   web/                the app: index.html, app.js, style.css, PWA manifest, icon, service worker
   assistant.py        WOLF's personality; assembles the enabled components
-  components/         swappable abilities: memory, web_search, clock (+ your own)
+  components/         swappable abilities: memory, web_search, clock, reminders, calendar,
+                      research (+ your own)
   memory.py           file-based long-term memory (profile, memories, journal)
   loop.py             shared Claude agent loop (streaming, tools, fallbacks)
 wolf_assistant/       `wolf-dev` development assistant (repo scanner, sandboxed tools, briefing)

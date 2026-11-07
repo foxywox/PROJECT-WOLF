@@ -36,6 +36,7 @@
   <main>
     <!-- Chat -->
     <section id="view-chat" class="view active" aria-label="Chat">
+      <div id="due-banner" class="due-banner" role="status" hidden></div>
       <div id="messages" class="messages" aria-live="polite">
         <div class="empty" id="chat-empty">
           <img src="/icon.svg" alt="" width="64" height="64">
@@ -95,6 +96,42 @@
 
         <h2>WOLF's picture of you</h2>
         <div id="profile" class="md card"></div>
+
+        <h2>Personality</h2>
+        <p class="hint">How WOLF talks to you. Changes apply from your next conversation.</p>
+        <form id="personality" class="card choices"></form>
+
+        <h2>Reminders</h2>
+        <p class="hint">Ask WOLF "remind me to…", or add one here. Due reminders show at the top of the chat.</p>
+        <div class="card">
+          <ul id="reminders" class="reminders"></ul>
+          <form id="reminder-form" class="form inline-form">
+            <label for="rm-text">Remind me to</label>
+            <input id="rm-text" maxlength="300" required placeholder="Call the dentist">
+            <label for="rm-due">When</label>
+            <input id="rm-due" type="datetime-local" required>
+            <div class="form-actions"><button class="pill-btn primary" type="submit">Add reminder</button></div>
+          </form>
+        </div>
+
+        <h2>Calendar</h2>
+        <p class="hint">Let WOLF see your schedule (it can't change anything). Works with Google, Outlook and Apple.</p>
+        <div class="card">
+          <ul id="calendars" class="calendars"></ul>
+          <div id="cal-events"></div>
+          <details class="how">
+            <summary>Where do I find my calendar link?</summary>
+            <p id="cal-howto" class="hint"></p>
+          </details>
+          <form id="calendar-form" class="form">
+            <label for="cal-name">Name</label>
+            <input id="cal-name" maxlength="40" placeholder="Personal" required>
+            <label for="cal-url">Private calendar link</label>
+            <input id="cal-url" type="url" required placeholder="https://calendar.google.com/calendar/ical/…/basic.ics" autocomplete="off">
+            <p class="hint small">This link stays on your computer. Anyone with it can read the calendar, so don't share it.</p>
+            <div class="form-actions"><button class="pill-btn primary" type="submit">Connect calendar</button></div>
+          </form>
+        </div>
 
         <h2>What WOLF can do</h2>
         <p class="hint">Turn abilities on or off. Changes apply from your next conversation.</p>

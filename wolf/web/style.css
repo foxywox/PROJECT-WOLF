@@ -170,10 +170,10 @@ main { grid-area: main; align-self: stretch; min-height: 0; position: relative; 
 /* Panels and cards */
 .panel { overflow-y: auto; padding: 20px max(16px, env(safe-area-inset-right)) 40px max(16px, env(safe-area-inset-left)); height: 100%; }
 .panel > *, #hub > * { max-width: 760px; margin-left: auto; margin-right: auto; }
-.panel h2 { font-size: 18px; margin: 22px 0 8px; text-wrap: balance; }
+.panel h2 { font-size: 18px; margin-top: 22px; margin-bottom: 8px; text-wrap: balance; }
 .panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.panel-head h2 { margin: 22px 0 8px; }
-.hint { color: var(--muted); font-size: 14px; margin: 0 0 12px; }
+.panel-head h2 { margin: 22px 0 8px; }  /* inside a centered row, so plain margins are fine */
+.hint { color: var(--muted); font-size: 14px; margin-top: 0; margin-bottom: 12px; }
 .muted { color: var(--muted); font-size: 14px; }
 .small { font-size: 13px; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; box-shadow: var(--shadow); }
@@ -298,6 +298,33 @@ input[type="search"], .form input, .form select, .form textarea {
 .form label { font-size: 14px; font-weight: 600; margin-top: 4px; }
 .form textarea { resize: vertical; }
 .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+
+/* Reminders banner (chat) */
+.due-banner { margin: 10px 16px 0; padding: 10px 14px; border-radius: 14px; background: var(--warn-soft); color: var(--text);
+  display: flex; flex-direction: column; gap: 6px; max-width: 760px; align-self: center; width: calc(100% - 32px); }
+.due-banner .row { display: flex; align-items: center; gap: 10px; }
+.due-banner .row span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.due-banner b { color: var(--warn); }
+
+/* Personality choices */
+.choices { display: flex; flex-direction: column; gap: 4px; }
+.choice { display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: start; padding: 8px 0; cursor: pointer; }
+.choice input { margin-top: 4px; width: 18px; height: 18px; accent-color: var(--accent); }
+.choice .name { font-weight: 700; }
+.choice .desc { color: var(--muted); font-size: 14px; }
+.choices textarea { width: 100%; margin-top: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--text); resize: vertical; }
+.choices .form-actions { display: flex; justify-content: flex-end; }
+
+/* Reminders and calendars lists */
+.reminders, .calendars { list-style: none; margin: 0 0 8px; padding: 0; }
+.reminders li, .calendars li, .event { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.reminders li span, .calendars li span, .event span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.reminders .when, .event .when, .calendars .when { color: var(--muted); font-size: 13px; flex: none; }
+.reminders .overdue .when { color: var(--warn); font-weight: 700; }
+.small-btn { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 4px 12px; cursor: pointer; font-size: 13px; flex: none; }
+.how { margin: 10px 0 4px; }
+.how summary { cursor: pointer; color: var(--accent); font-size: 14px; }
+#cal-events .eyebrow { margin: 10px 0 2px; }
 
 /* Locked + toast */
 .locked { position: fixed; inset: 0; z-index: 10; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; }

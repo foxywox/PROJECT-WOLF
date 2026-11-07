@@ -61,6 +61,22 @@ memory, and you can talk to it in a web app (`wolf serve`, phone + desktop, voic
   [set]`, `wolf-dev forum [list|read|new|reply]` (kind `ai`, default author Claude), and the
   `research` component (off by default; WOLF posts as "WOLF"). The briefing includes the plan
   and the 5 most recent threads.
+- `wolf/personality.py`: presets dict (balanced default, coach, calm, playful, brief) or
+  `custom` = `$WOLF_HOME/personality.md` (max 4000 chars); config `"personality"`. Goes into
+  the system prompt after the fixed Boundaries (which add a crisis rule).
+  API `GET|POST /api/personality`; CLI `wolf personality [set NAME]`.
+- `wolf/components/reminders.py` (default on): `$WOLF_HOME/reminders.json`, ids `r1..`; due
+  = local ISO date (9 AM) or datetime; tools add/list/complete; context lists due + next 7
+  days. API `GET|POST /api/reminders`, `POST /api/reminders/<id>/done`; chat shows a due
+  banner (polls every 60 s).
+- `wolf/components/calendar.py` (off until a calendar is added): read-only via private iCal
+  links (`icalendar` + `recurring-ical-events`), stored in config
+  `settings.calendar.calendars`; 15-min cache in `$WOLF_HOME/cache/`, last good copy on
+  failure. Tool `calendar_events(start_date, days)`; context = today + tomorrow. The app API
+  only accepts http(s)/webcal links (`allow_files=False`); local .ics paths are code/CLI only.
+  Tests patch `calendar.urlopen` (never the global `urllib.request.urlopen`, which the test
+  client also uses).
+- Memory reflection is skipped for trivial chats (one user message under 40 chars).
 - `wolf/web/`: tabs Chat / Memory / You / Project; header tabs on desktop, fixed bottom bar
   under 640px (`--tabbar`). Chat welcome has suggestion buttons; failed messages get "Try
   again". You tab: "How WOLF works", profile, ability switches, journal with Today/Yesterday.
@@ -110,6 +126,8 @@ memory, and you can talk to it in a web app (`wolf serve`, phone + desktop, voic
 - Before committing: `python3 claude/tools/check.py`. For UI changes also
   `python3 claude/tools/ui_smoke.py OUTDIR` and look at the screenshots (it uses a throwaway
   copy of the hub).
+- In `.panel`, centering comes from `margin-left/right: auto`; set vertical margins with
+  longhands on headings and hints, or they snap to the left edge on desktop.
 - A grid item with `position: fixed` still obeys `justify-self`; the phone tab bar needs
   `justify-self: stretch` (a centered bar was caught in screenshots).
 - End of session: changelog entry + rewrite `claude/HANDOFF.md`.
@@ -122,6 +140,9 @@ memory, and you can talk to it in a web app (`wolf serve`, phone + desktop, voic
 - Default model `claude-opus-5-5`, effort `medium` for chat.
 - 2026-11-07: Every WOLF ability is a swappable component (owner asked for components
   "completely interchangeable with WOLF").
+- 2026-11-07: Personality is a setting (presets or the owner's own words); reminders on by
+  default; calendar via private iCal links so no provider has to be chosen (built while the
+  owner was away).
 - 2026-11-07: The Build Tracker lives in WOLF (Project tab), alongside the production plan
   and a research forum for people and AI (owner's request). Forum posts are public files.
 - 2026-11-07: Claude keeps its own workspace in `claude/` (owner's request): handoffs,

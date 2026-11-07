@@ -9,6 +9,7 @@
   wolf journal                show recent conversation summaries
   wolf serve                  open WOLF as a web app (phone + desktop, with voice)
   wolf components             list WOLF's abilities; `enable`/`disable NAME` to swap them
+  wolf personality            list personalities; `set NAME`, or `set custom` after writing your own
 """
 
 from __future__ import annotations
@@ -119,6 +120,9 @@ def main(argv: list[str] | None = None) -> int:
     p_comp = sub.add_parser("components", help="List, enable or disable WOLF's components")
     p_comp.add_argument("action", nargs="?", choices=["list", "enable", "disable", "reset"], default="list")
     p_comp.add_argument("name", nargs="?")
+    p_pers = sub.add_parser("personality", help="Choose how WOLF sounds")
+    p_pers.add_argument("action", nargs="?", choices=["list", "set"], default="list")
+    p_pers.add_argument("name", nargs="?")
     p_serve = sub.add_parser("serve", help="Run WOLF as a web app (phone + desktop, with voice)")
     p_serve.add_argument("--host", default=os.environ.get("WOLF_HOST", "127.0.0.1"),
                          help="Address to listen on; use 0.0.0.0 to reach WOLF from your phone on the same Wi-Fi")
@@ -156,6 +160,27 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if cmd == "components":
         return components_command(store, args.action, args.name)
+    if cmd == "personality":
+        from . import personality
+
+        if args.action == "set":
+            try:
+                personality.choose(store.home, args.name or "")
+            except ValueError as e:
+                print(e, file=sys.stderr)
+                if args.name == "custom":
+                    print(f"Write your own description in {personality.custom_path(store.home)} first.", file=sys.stderr)
+                return 1
+            print(f"WOLF's personality is now '{args.name}'. It takes effect in your next conversation.")
+            return 0
+        cur = personality.current(store.home)
+        print("WOLF's personality (* = current):\n")
+        for pid, p in personality.PRESETS.items():
+            print(f"  {'*' if pid == cur else ' '} {pid:<10} {p['summary']}")
+        own = personality.custom_text(store.home)
+        print(f"  {'*' if cur == 'custom' else ' '} {'custom':<10} "
+              + (own.splitlines()[0][:60] if own else f"your own: write it in {personality.custom_path(store.home)}"))
+        return 0
 
     # ---- everything below talks to Claude ----
     if not has_credentials(store.home):

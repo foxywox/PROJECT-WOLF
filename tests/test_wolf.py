@@ -124,7 +124,7 @@ def test_wolf_learns_during_conversation_and_reflects(store):
     client = _FakeClient([learn, reply, paused, summary])
     agent = build_wolf(store, client=client, out=lambda s: None)
 
-    assert agent.ask("I just adopted a dog, Juno!") == "Juno sounds lovely!"
+    assert agent.ask("I just adopted a dog from the shelter, her name is Juno!") == "Juno sounds lovely!"
     assert store.search("dog")[0].text == "Has a dog named Juno"
     assert reflect(agent, store) == "User introduced their dog Juno."
     assert "dog Juno" in store.recent_journal()[-1]
@@ -137,3 +137,23 @@ def test_wolf_learns_during_conversation_and_reflects(store):
 def test_reflect_skips_empty_conversation(store):
     agent = build_wolf(store, client=_FakeClient([]), out=lambda s: None)
     assert reflect(agent, store) == ""
+
+
+def test_reflection_skips_trivial_chats(store):
+    """A lone "hi" or "thanks" doesn't cost an extra model call or clutter the journal."""
+    reply = NS(stop_reason="end_turn", content=[NS(type="text", text="Hi! How can I help?")])
+    client = _FakeClient([reply])
+    agent = build_wolf(store, client=client, out=lambda s: None)
+    agent.ask("[Saturday 2026-11-07 10:00] hi")
+    assert reflect(agent, store) == ""
+    assert len(client.calls) == 1 and store.recent_journal() == []
+
+
+def test_reflection_runs_after_two_short_messages(store):
+    r1 = NS(stop_reason="end_turn", content=[NS(type="text", text="Hi!")])
+    r2 = NS(stop_reason="end_turn", content=[NS(type="text", text="Noted.")])
+    summary = NS(stop_reason="end_turn", content=[NS(type="text", text="Quick hello.")])
+    agent = build_wolf(store, client=_FakeClient([r1, r2, summary]), out=lambda s: None)
+    agent.ask("hi")
+    agent.ask("I moved to Denver")
+    assert reflect(agent, store) == "Quick hello."

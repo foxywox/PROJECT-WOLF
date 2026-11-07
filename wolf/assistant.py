@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import Any
 
 from .components import ComponentContext, Toolkit, enabled_names, load_components
+from . import personality
 from .components.memory import REFLECT_PROMPT, MemoryTools, reflect  # noqa: F401  (public API)
 from .config import load_config, make_client
 from .loop import AgentLoop
@@ -17,16 +18,15 @@ from .memory import MemoryStore
 
 SYSTEM_PROMPT = """\
 You are WOLF, a personal AI assistant for one person: the user. You stay with them over
-months and years, and you get more useful the more you learn about them.
+months and years, and you get more useful the more you learn about them. Use what you know
+about them to tailor your help, without reciting it back.
 
-Boundaries
+Boundaries (these always apply, whatever your personality)
 - Never store or repeat back passwords, API keys, full card or account numbers, government ID
   numbers, or similar secrets, even if asked. Say you won't, and why.
 - Be honest about what you know and what you're guessing.
-
-Style
-- Warm, direct, and practical. Use what you know to tailor answers without reciting it back.
-- Ask a short clarifying question when it would change your answer.
+- If the user seems to be in crisis or at risk of harm, drop any playfulness, respond with
+  care, and encourage them to contact local emergency services or someone they trust.
 """
 
 
@@ -43,10 +43,11 @@ def build_toolkit(store: MemoryStore, components: list[str] | None = None, web: 
     return Toolkit(load_components(ComponentContext(store=store, config=config), names))
 
 
-def system_blocks(kit: Toolkit) -> list[dict[str, Any]]:
-    """Two cacheable blocks, frozen for the conversation: who WOLF is + how to use its
-    components, then what the components know right now (e.g. the memory snapshot)."""
-    stable = SYSTEM_PROMPT
+def system_blocks(kit: Toolkit, home=None) -> list[dict[str, Any]]:
+    """Two cacheable blocks, frozen for the conversation: who WOLF is (boundaries, personality)
+    + how to use its components, then what the components know right now (e.g. memories)."""
+    style = personality.text(home) if home is not None else personality.PRESETS[personality.DEFAULT]["text"]
+    stable = SYSTEM_PROMPT + "\nPersonality\n" + style + "\n"
     if kit.instructions():
         stable += "\n# Your abilities\n\n" + kit.instructions() + "\n"
     blocks = [{"type": "text", "text": stable}]
@@ -56,7 +57,7 @@ def system_blocks(kit: Toolkit) -> list[dict[str, Any]]:
 
 
 def build_system(store: MemoryStore, components: list[str] | None = None) -> list[dict[str, Any]]:
-    return system_blocks(build_toolkit(store, components))
+    return system_blocks(build_toolkit(store, components), store.home)
 
 
 def build_wolf(store: MemoryStore, web: bool = True, components: list[str] | None = None,
@@ -64,7 +65,7 @@ def build_wolf(store: MemoryStore, web: bool = True, components: list[str] | Non
     kit = build_toolkit(store, components, web=web)
     if kwargs.get("client") is None:
         kwargs["client"] = make_client(store.home)
-    return AgentLoop(kit, system_blocks(kit), server_tools=kit.server_tools(), **kwargs)
+    return AgentLoop(kit, system_blocks(kit, store.home), server_tools=kit.server_tools(), **kwargs)
 
 
 def finish_conversation(agent: AgentLoop) -> str:

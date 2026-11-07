@@ -47,15 +47,17 @@ def test_committed_plan_is_valid():
 
 
 def test_plan_summary_and_status_updates(hubdir):
-    before = hub.plan()["summary"]["done"]
-    item = hub.set_item_status("calendar", "active", "Starting with read-only Google Calendar")
-    assert item["status"] == "active"
+    plan = hub.plan()
+    before = plan["summary"]["done"]
+    todo = next(i for p in plan["phases"] for i in p["items"] if i["status"] != "done")
+    item = hub.set_item_status(todo["id"], "active", "Starting on this")
+    assert item["status"] == "active" and item["note"] == "Starting on this"
     assert hub.plan()["summary"]["done"] == before
-    hub.set_item_status("calendar", "done")
+    hub.set_item_status(todo["id"], "done")
     assert hub.plan()["summary"]["done"] == before + 1
-    assert "Calendar component" in hub.plan_text()
+    assert todo["title"] in hub.plan_text()
     with pytest.raises(hub.HubError):
-        hub.set_item_status("calendar", "finished")
+        hub.set_item_status(todo["id"], "finished")
     with pytest.raises(hub.HubError):
         hub.set_item_status("nope", "done")
 
@@ -170,7 +172,8 @@ def test_project_tab_api(server):
 
 def test_abilities_api(server):
     comps = {c["name"]: c["enabled"] for c in _req(server, "/api/components")["components"]}
-    assert comps == {"memory": True, "web_search": True, "clock": True, "research": False}
+    assert comps == {"memory": True, "web_search": True, "clock": True, "reminders": True,
+                     "research": False, "calendar": False}
     after = {c["name"]: c["enabled"] for c in
              _req(server, "/api/components", "POST", {"name": "research", "enabled": True})["components"]}
     assert after["research"] is True
