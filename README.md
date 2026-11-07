@@ -62,6 +62,7 @@ the link. To revoke it, delete that file and restart `wolf serve`.
 | Command | What it does |
 |---|---|
 | `wolf setup` | Connect WOLF to Claude (paste your API key once) |
+| `wolf components` | See WOLF's abilities; `enable`/`disable NAME` to switch them |
 | `wolf serve` | Run the WOLF app (`--open` opens your browser) |
 | `wolf` / `wolf chat` | Have a conversation in the terminal |
 | `wolf ask "..."` | Ask one question |
@@ -96,6 +97,26 @@ your user account:
 It is **never** stored in this repository. WOLF won't save passwords, keys, account numbers,
 or similar secrets. Delete or edit any file at any time. To reset WOLF completely, delete the folder.
 
+## Components: WOLF's abilities
+
+Everything WOLF can do beyond talking is a component you can switch on or off:
+
+| Component | What it does |
+|---|---|
+| `memory` | Remembers you across conversations (profile, memories, journal) |
+| `web_search` | Looks things up on the web |
+| `clock` | Knows the current date and time |
+
+`wolf components` lists them; `wolf components disable web_search` turns one off.
+
+**Add your own:** put a Python file in `~/.wolf/components/` with one class that extends
+`wolf.components.Component`, then `wolf components enable <filename>`. A component can give WOLF
+tools, instructions, a snapshot of data at the start of each conversation, and a hook when a
+conversation ends. See the docstring in `wolf/components/__init__.py` and
+`wolf/components/clock.py` for a 20-line example. Components can also be installed as packages
+(entry point group `wolf.components`), or replace a built-in entirely: a different memory
+system is just another component named in the list.
+
 ## Hosting WOLF online (optional)
 
 To use WOLF from anywhere without leaving a computer on, run it on a hosting service that
@@ -122,6 +143,9 @@ This repo also contains a development assistant for working on WOLF itself:
 - From a terminal: `wolf-dev analyze`, `wolf-dev ask "..."`, `wolf-dev chat`
   (`--allow-write` / `--allow-run` to let it edit and test).
 - Developer knowledge base: `docs/wolf/KNOWLEDGE.md`.
+- Claude's workspace: `claude/` (handoff, changelog, tools). `wolf-dev brief` prints everything
+  a new Claude session needs; `wolf-dev log`, `wolf-dev tools`. Run all checks with
+  `python3 claude/tools/check.py`.
 - Tests (offline): `python3 -m pytest -q`
 
 ```
@@ -129,10 +153,12 @@ wolf/                 WOLF itself
   cli.py              `wolf` command
   server.py           `wolf serve`: web app server + JSON/streaming API (standard library only)
   web/                the app: index.html, app.js, style.css, PWA manifest, icon, service worker
-  assistant.py        persona, memory tools, end-of-conversation reflection
+  assistant.py        WOLF's personality; assembles the enabled components
+  components/         swappable abilities: memory, web_search, clock (+ your own)
   memory.py           file-based long-term memory (profile, memories, journal)
   loop.py             shared Claude agent loop (streaming, tools, fallbacks)
-wolf_assistant/       `wolf-dev` development assistant (repo scanner + sandboxed tools)
+wolf_assistant/       `wolf-dev` development assistant (repo scanner, sandboxed tools, briefing)
+claude/               Claude's workspace: handoff, changelog, tools catalog, helper scripts
 .claude/              Claude Code subagent and skills for developing WOLF
 docs/wolf/            developer knowledge base
 tests/                offline tests

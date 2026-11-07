@@ -34,11 +34,27 @@ memory, and you can talk to it in a web app (`wolf serve`, phone + desktop, voic
   SIGTERM is handled like Ctrl+C so open conversations are reflected on before exit.
 - `wolf/cli.py`: `wolf` command. Offline subcommands (`memory`, `forget`, `profile`, `journal`)
   touch only `MemoryStore`; `chat`/`ask` build an agent and call `reflect` on exit.
-- `wolf/assistant.py`: `SYSTEM_PROMPT` (persona, learning rules, secret-storage ban),
-  `MemoryTools` (remember/recall/update_memory/forget/update_profile), `build_system`
-  (profile + up to 150 most recent memories + last 10 journal lines, frozen per session for
-  prompt caching), `build_wolf` (adds `web_search_20260209` server tool), `reflect`
-  (end-of-conversation pass that saves missed facts and journals a one-line summary).
+- `wolf/assistant.py`: core only. `SYSTEM_PROMPT` = personality + boundaries (no feature
+  rules). `build_toolkit` loads the enabled components; `system_blocks` makes two cached
+  blocks: persona + each component's `instructions()`, then all components' `context()`;
+  `build_wolf`; `finish_conversation` runs every component's `on_end`. Re-exports
+  `MemoryTools`, `reflect`, `REFLECT_PROMPT` for compatibility.
+- `wolf/components/__init__.py`: `Component` base (tools/call/server_tools/instructions/
+  context/on_end), `ComponentContext` (store, config, `settings(name)` from config.json
+  `"settings"`), `Toolkit` (merges components, rejects duplicate tool names, validates inputs,
+  freezes tool defs for caching), discovery `resolve()`: built-in name, then
+  `$WOLF_HOME/components/<name>.py` (exactly one Component subclass), then entry point group
+  `wolf.components`, then `"module:Class"`. Enabled list: config.json `"components"`, default
+  `memory, web_search, clock`. CLI: `wolf components [list|enable|disable|reset]`.
+- `wolf/components/memory.py`: `MemoryComponent` (tools from `MemoryTools`; learning rules as
+  instructions; profile + up to 150 recent memories + last 10 journal lines as context; `on_end`
+  = `reflect`). `web.py`: `web_search_20260209` server tool (`max_uses` setting, default 5).
+  `clock.py`: `current_time` tool.
+- `claude/` + `wolf_assistant/workspace.py`: Claude's workspace. `brief()` assembles protocol,
+  HANDOFF, last 3 changelog days, knowledge base, tools, git state, components, repo map
+  (`--tests` adds test results). `add_log()` keeps CHANGELOG.md newest-day-first. Tools are
+  scripts in `claude/tools/` whose first docstring/comment line is the description
+  (`check`, `progress`, `ui_smoke`). The `wolf-dev` agent's system prompt is this briefing.
 - `wolf/memory.py`: `MemoryStore` over `$WOLF_HOME` (default `~/.wolf`, chmod 700):
   `memories.jsonl` (ids `m1`, `m2`, ...; exact-text dedupe; atomic rewrite), `profile.md`
   (`## section` replace), `journal.md`. `search` is keyword/tag scoring, with no embeddings.
@@ -73,7 +89,12 @@ memory, and you can talk to it in a web app (`wolf serve`, phone + desktop, voic
   a closed browser stream must never abort a turn or lose a memory write.
 - Without credentials the SDK raises `TypeError("Could not resolve authentication method")`,
   not an API error; `server._friendly` maps it to `NOT_SET_UP`.
-- New tools: define with `wolf.loop.tool(...)`, validate with `validate(...)` before running.
+- New abilities are components, never core edits; if a component needs something the core
+  lacks, add a hook to `Component`.
+- New tools: define with `wolf.loop.tool(...)`; `Toolkit.call` validates inputs before running.
+- Before committing: `python3 claude/tools/check.py`. For UI changes also
+  `python3 claude/tools/ui_smoke.py OUTDIR` and look at the screenshots.
+- End of session: changelog entry + rewrite `claude/HANDOFF.md`.
 
 ## Decisions
 
@@ -81,6 +102,10 @@ memory, and you can talk to it in a web app (`wolf serve`, phone + desktop, voic
 - 2026-11-07: `wolf` command is WOLF itself; the dev assistant moved to `wolf-dev`.
 - 2026-11-07: Memory stored as plain files in `~/.wolf` so it's transparent, editable, and private.
 - Default model `claude-opus-5-5`, effort `medium` for chat.
+- 2026-11-07: Every WOLF ability is a swappable component (owner asked for components
+  "completely interchangeable with WOLF").
+- 2026-11-07: Claude keeps its own workspace in `claude/` (owner's request): handoffs,
+  personal changelog, tools.
 - 2026-11-07: First interface beyond the terminal is a web app with voice that works on phone
   and desktop (owner chose "where you talk to it" first). Integrations and proactive
   behaviour are deferred until later.
@@ -93,3 +118,5 @@ memory, and you can talk to it in a web app (`wolf serve`, phone + desktop, voic
 - Integrations to learn from (calendar, email, notes, files)?
 - Semantic (embedding) search once memory grows past a few hundred items?
 - Proactive behaviour (reminders, check-ins, scheduled reviews of goals)?
+- Personality: owner mentioned "MONTY" personality files; none found (2026-11-07). Persona text is `SYSTEM_PROMPT` in `wolf/assistant.py` until the owner shares it.
+- Swappable model backend (e.g. a local model) as a component-style choice?

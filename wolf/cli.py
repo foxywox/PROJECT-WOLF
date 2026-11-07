@@ -8,6 +8,7 @@
   wolf profile                show WOLF's profile of you
   wolf journal                show recent conversation summaries
   wolf serve                  open WOLF as a web app (phone + desktop, with voice)
+  wolf components             list WOLF's abilities; `enable`/`disable NAME` to swap them
 """
 
 from __future__ import annotations
@@ -55,6 +56,48 @@ def setup(store: MemoryStore, model: str, read_secret: Callable[[str], str] = ge
     return 1
 
 
+def components_command(store: MemoryStore, action: str, name: str | None) -> int:
+    from .components import DEFAULT_COMPONENTS, available, enabled_names, plugin_dir
+
+    config = load_config(store.home)
+    enabled = enabled_names(config)
+    found = available(store.home)
+    if action == "list":
+        print("WOLF components (* = on):\n")
+        for comp, desc in found.items():
+            print(f"  {'*' if comp in enabled else ' '} {comp:<14} {desc}")
+        missing = [c for c in enabled if c not in found and ":" not in c]
+        for comp in missing:
+            print(f"  ! {comp:<14} (enabled but not found)")
+        print(f"\nAdd your own: put a Component class in {plugin_dir(store.home)}/<name>.py, "
+              "then `wolf components enable <name>`.")
+        return 0
+    if action == "reset":
+        config.pop("components", None)
+        save_config(config, store.home)
+        print("Back to the default components: " + ", ".join(DEFAULT_COMPONENTS))
+        return 0
+    if not name:
+        print(f"Which component? Example: wolf components {action} clock", file=sys.stderr)
+        return 1
+    if action == "enable":
+        if name not in found and ":" not in name:
+            print(f"No component named '{name}'. Run `wolf components` to see the list.", file=sys.stderr)
+            return 1
+        if name not in enabled:
+            enabled.append(name)
+    else:
+        if name not in enabled:
+            print(f"'{name}' is already off.")
+            return 0
+        enabled.remove(name)
+    config["components"] = enabled
+    save_config(config, store.home)
+    print(f"{name} is now {'on' if action == 'enable' else 'off'}. It takes effect in your next conversation"
+          " (restart `wolf serve` if it's running).")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="wolf", description="WOLF: your personal AI assistant")
     ap.add_argument("--version", action="version", version=f"wolf {__version__}")
@@ -73,6 +116,9 @@ def main(argv: list[str] | None = None) -> int:
     p_forget.add_argument("id")
     sub.add_parser("profile", help="Show your profile")
     sub.add_parser("journal", help="Show recent conversation summaries")
+    p_comp = sub.add_parser("components", help="List, enable or disable WOLF's components")
+    p_comp.add_argument("action", nargs="?", choices=["list", "enable", "disable", "reset"], default="list")
+    p_comp.add_argument("name", nargs="?")
     p_serve = sub.add_parser("serve", help="Run WOLF as a web app (phone + desktop, with voice)")
     p_serve.add_argument("--host", default=os.environ.get("WOLF_HOST", "127.0.0.1"),
                          help="Address to listen on; use 0.0.0.0 to reach WOLF from your phone on the same Wi-Fi")
@@ -108,6 +154,8 @@ def main(argv: list[str] | None = None) -> int:
     if cmd == "journal":
         print("\n".join(store.recent_journal(30)) or "(no conversations yet)")
         return 0
+    if cmd == "components":
+        return components_command(store, args.action, args.name)
 
     # ---- everything below talks to Claude ----
     if not has_credentials(store.home):
@@ -130,7 +178,7 @@ def main(argv: list[str] | None = None) -> int:
     # ---- conversations ----
     import anthropic
 
-    from .assistant import build_wolf, now_stamp, reflect
+    from .assistant import build_wolf, finish_conversation, now_stamp
 
     agent = build_wolf(store, web=not args.no_web, model=model, effort=args.effort)
     stamp = now_stamp()
@@ -153,7 +201,7 @@ def main(argv: list[str] | None = None) -> int:
                     agent.ask((stamp if first else "") + q)
                     first = False
         print()
-        summary = reflect(agent, store)
+        summary = finish_conversation(agent)
         if summary:
             print(f"[saved to journal] {summary}")
     except KeyboardInterrupt:

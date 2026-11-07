@@ -1,0 +1,110 @@
+"""Screenshot the WOLF web app on phone and desktop with a fake Claude (no API key, no cost).
+
+Usage: python3 claude/tools/ui_smoke.py [OUTPUT_DIR]
+Needs Node.js with Playwright (pre-installed in Claude Code's cloud sandbox). It starts
+`wolf serve` on a temporary memory folder with sample data, sends one chat message, opens
+every tab, then prints any page errors. Look at the PNGs it writes before shipping UI changes.
+"""
+
+from __future__ import annotations
+
+import json
+import subprocess
+import sys
+import tempfile
+import threading
+from http.server import ThreadingHTTPServer
+from pathlib import Path
+from types import SimpleNamespace as NS
+
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+
+from wolf.assistant import build_wolf  # noqa: E402
+from wolf.memory import MemoryStore  # noqa: E402
+from wolf.server import WolfApp, make_handler  # noqa: E402
+
+TOKEN = "smoke-test-token-123"
+REPLY = ("That's a great goal! Here's a simple **12-week** outline:\n\n1. Weeks 1-4: easy base runs\n"
+         "2. Weeks 5-8: add a long run\n3. Weeks 9-12: taper\n\nWant a weekly check-in?")
+
+BROWSER_SCRIPT = r"""
+const { chromium, devices } = require('playwright');
+(async () => {
+  const [base, dir] = process.argv.slice(2);
+  const b = await chromium.launch(); const errors = [];
+  for (const [name, opts] of [["phone", devices["iPhone 13"]], ["desktop", { viewport: { width: 1200, height: 800 }, colorScheme: "dark" }]]) {
+    const ctx = await b.newContext(opts); const p = await ctx.newPage();
+    p.on("pageerror", e => errors.push(name + ": " + e.message));
+    p.on("console", m => { if (m.type() === "error") errors.push(name + " console: " + m.text()); });
+    await p.goto(base + "/?token=TOKEN");
+    await p.fill("#input", "I'm training for a half marathon in March"); await p.click("#send");
+    await p.waitForSelector(".msg.wolf .chip"); await p.screenshot({ path: `${dir}/${name}-chat.png` });
+    await p.click('[data-view="memory"]'); await p.waitForSelector(".mem-list li");
+    await p.screenshot({ path: `${dir}/${name}-memory.png` });
+    await p.click('[data-view="you"]'); await p.waitForSelector("#journal li");
+    await p.screenshot({ path: `${dir}/${name}-you.png` });
+    await ctx.close();
+  }
+  console.log(JSON.stringify({ errors })); await b.close();
+})().catch(e => { console.log(JSON.stringify({ errors: ["script: " + e.message] })); process.exit(1); });
+""".replace("TOKEN", TOKEN)
+
+
+class _Stream:
+    def __init__(self, msg):
+        self.msg = msg
+        self.text_stream = [b.text for b in msg.content if b.type == "text"]
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def get_final_message(self):
+        return self.msg
+
+
+class FakeClaude:
+    """Saves one memory, then replies with REPLY."""
+
+    def __init__(self):
+        self.beta = NS(messages=NS(stream=self.stream))
+
+    def stream(self, messages, **_kw):
+        if isinstance(messages[-1]["content"], str):
+            return _Stream(NS(stop_reason="tool_use", content=[NS(type="tool_use", id="t1", name="remember",
+                              input={"text": "Training for a half marathon in March", "tags": ["goals"]})]))
+        return _Stream(NS(stop_reason="end_turn", content=[NS(type="text", text=REPLY)]))
+
+
+def main() -> int:
+    out = Path(sys.argv[1] if len(sys.argv) > 1 else tempfile.mkdtemp(prefix="wolf-ui-")).resolve()
+    out.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory() as home:
+        store = MemoryStore(home)
+        store.add("Has a dog named Juno", ["pets"])
+        store.update_profile("Goals", "- Run a half marathon in March")
+        store.add_journal("Talked about getting back into running.")
+        client = FakeClaude()
+        app = WolfApp(store, agent_factory=lambda: build_wolf(store, client=client, out=lambda s: None))
+        httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(app, TOKEN))
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        base = f"http://127.0.0.1:{httpd.server_address[1]}"
+        with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as f:
+            f.write(BROWSER_SCRIPT)
+        r = subprocess.run(["node", f.name, base, str(out)], capture_output=True, text=True, timeout=180)
+        httpd.shutdown()
+    try:
+        errors = json.loads(r.stdout.strip().splitlines()[-1])["errors"]
+    except (ValueError, IndexError, KeyError):
+        print(r.stdout + r.stderr)
+        return 1
+    print(f"Screenshots in {out}")
+    print("No page errors." if not errors else "Page errors:\n  " + "\n  ".join(errors))
+    return 0 if not errors else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

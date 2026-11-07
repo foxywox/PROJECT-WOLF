@@ -7,6 +7,11 @@ Examples:
   wolf-dev chat                     # interactive session
   wolf-dev learn                    # refresh the knowledge base
   wolf-dev review --allow-run       # review recent changes (uses git)
+
+Claude's workspace (claude/), all offline:
+  wolf-dev brief [--tests]          # everything a new Claude session needs to pick up the work
+  wolf-dev log "what I did and why" # add to Claude's changelog (claude/CHANGELOG.md)
+  wolf-dev tools [run NAME ...]     # list or run Claude's helper scripts (claude/tools/)
 """
 
 from __future__ import annotations
@@ -17,6 +22,7 @@ from pathlib import Path
 
 from . import __version__
 from .prompts import TASKS
+from . import workspace
 from .scanner import scan
 from .tools import Toolbox
 
@@ -56,12 +62,36 @@ def main(argv: list[str] | None = None) -> int:
     p_ask = sub.add_parser("ask", help="Ask one question")
     p_ask.add_argument("question", nargs="+")
     sub.add_parser("chat", help="Interactive session")
+    p_brief = sub.add_parser("brief", help="Print the full briefing for a new Claude session")
+    p_brief.add_argument("--tests", action="store_true", help="Also run the test suite and include results")
+    p_log = sub.add_parser("log", help="Add an entry to Claude's changelog")
+    p_log.add_argument("text", nargs="+")
+    p_tools = sub.add_parser("tools", help="List Claude's helper scripts, or run one")
+    p_tools.add_argument("action", nargs="?", choices=["list", "run"], default="list")
+    p_tools.add_argument("name", nargs="?")
+    p_tools.add_argument("args", nargs=argparse.REMAINDER)
     args = ap.parse_args(argv)
 
     root = Path(args.root).resolve() if args.root else _find_root(Path.cwd())
 
     if args.cmd == "map":
         print(scan(root).render())
+        return 0
+    if args.cmd == "brief":
+        print(workspace.brief(root, tests=args.tests))
+        return 0
+    if args.cmd == "log":
+        day = workspace.add_log(root, " ".join(args.text))
+        print(f"Logged under {day} in {workspace.WORKSPACE}/CHANGELOG.md")
+        return 0
+    if args.cmd == "tools":
+        if args.action == "run":
+            if not args.name:
+                print("Which tool? Example: wolf-dev tools run check", file=sys.stderr)
+                return 1
+            return workspace.run_tool(root, args.name, args.args)
+        for name, desc in workspace.list_tools(root):
+            print(f"  {name:<12} {desc}")
         return 0
 
     from .agent import DEFAULT_MODEL, WolfAgent  # imported lazily so `wolf map` works offline

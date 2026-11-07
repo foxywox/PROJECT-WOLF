@@ -5,3 +5,4 @@ __pycache__/
 .pytest_cache/
 .wolf/sessions/
 build/
+claude/.progress.json

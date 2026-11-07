@@ -34,7 +34,7 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import parse_qs, urlparse
 
-from .assistant import build_wolf, now_stamp, reflect
+from .assistant import build_wolf, finish_conversation, now_stamp
 from .config import NOT_SET_UP
 from .loop import AgentLoop
 from .memory import MemoryStore
@@ -110,7 +110,7 @@ class WolfApp:
     def end(self, conversation_id: str) -> str:
         with self.lock:
             conv = self.conversations.pop(conversation_id, None)
-            return reflect(conv.agent, self.store) if conv else ""
+            return finish_conversation(conv.agent) if conv else ""
 
     def sweep(self, now: float | None = None) -> int:
         """Reflect on and close idle conversations. Returns how many were closed."""
