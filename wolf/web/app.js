@@ -170,6 +170,9 @@ async function send(text, viaVoice) {
           if (conversationId && data.conversation_id !== conversationId && transcript.length > 1) {
             // The server closed the old conversation (idle or restarted) and started a new one.
             transcript.splice(transcript.length - 1, 0, { role: "divider", text: "New conversation" });
+            const rows = messagesEl.querySelectorAll(".msg.user");
+            const lastUser = rows[rows.length - 1];
+            lastUser?.before(Object.assign(document.createElement("div"), { className: "divider", textContent: "New conversation" }));
           }
           conversationId = data.conversation_id;
           store.set("wolf.conversation", conversationId);

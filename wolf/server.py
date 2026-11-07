@@ -20,7 +20,9 @@ from __future__ import annotations
 import hmac
 import json
 import mimetypes
+import os
 import secrets
+import signal
 import socket
 import ssl
 import threading
@@ -33,6 +35,7 @@ from typing import Any, Callable
 from urllib.parse import parse_qs, urlparse
 
 from .assistant import build_wolf, now_stamp, reflect
+from .config import NOT_SET_UP
 from .loop import AgentLoop
 from .memory import MemoryStore
 
@@ -44,6 +47,13 @@ STATIC = {"/": "index.html", "/index.html": "index.html", "/app.js": "app.js", "
 
 
 def load_token(store: MemoryStore) -> str:
+    """The access token for the web app: $WOLF_TOKEN if set (hosted deployments), otherwise a
+    random token generated once and kept in $WOLF_HOME/web_token (owner-only)."""
+    env = os.environ.get("WOLF_TOKEN", "").strip()
+    if env:
+        if len(env) < 16:
+            raise SystemExit("WOLF_TOKEN must be at least 16 characters.")
+        return env
     path = store.home / "web_token"
     if path.exists() and path.read_text().strip():
         return path.read_text().strip()
@@ -218,7 +228,7 @@ def make_handler(app: WolfApp, token: str):
                 try:
                     self.wfile.write(f"event: {event}\ndata: {json.dumps(data)}\n\n".encode())
                     self.wfile.flush()
-                except (BrokenPipeError, ConnectionResetError):
+                except (OSError, ValueError):  # broken pipe, reset, or stream already closed
                     pass  # browser went away; keep the turn running so memory is still saved
 
             conv_id = app.open(body.get("conversation_id") or None)
@@ -253,7 +263,9 @@ def _friendly(e: Exception) -> str:
     import anthropic
 
     if isinstance(e, anthropic.AuthenticationError):
-        return "WOLF can't reach Claude: set ANTHROPIC_API_KEY (or run `ant auth login`) and restart `wolf serve`."
+        return "Claude rejected WOLF's API key. Run `wolf setup` on the computer running WOLF, then restart `wolf serve`."
+    if isinstance(e, TypeError) and "authentication" in str(e).lower():
+        return NOT_SET_UP
     if isinstance(e, anthropic.RateLimitError):
         return "Claude is rate-limiting requests right now. Try again in a minute."
     if isinstance(e, anthropic.APIStatusError):
@@ -273,7 +285,7 @@ def lan_ip() -> str | None:
 
 
 def serve(store: MemoryStore, host: str = "127.0.0.1", port: int = 8765,
-          certfile: str | None = None, keyfile: str | None = None) -> None:
+          certfile: str | None = None, keyfile: str | None = None, open_browser: bool = False) -> None:
     app = WolfApp(store)
     token = load_token(store)
     httpd = ThreadingHTTPServer((host, port), make_handler(app, token))
@@ -292,9 +304,21 @@ def serve(store: MemoryStore, host: str = "127.0.0.1", port: int = 8765,
 
     threading.Thread(target=sweeper, daemon=True).start()
 
+    # Hosts and `docker stop` send SIGTERM: treat it like Ctrl+C so open conversations are saved.
+    def _terminate(*_a):
+        raise KeyboardInterrupt
+
+    try:
+        signal.signal(signal.SIGTERM, _terminate)
+    except ValueError:  # not in the main thread (e.g. tests)
+        pass
+
     shown_host = "localhost" if host in ("127.0.0.1", "localhost") else host
+    public_url = os.environ.get("WOLF_PUBLIC_URL", "").rstrip("/")
     print("WOLF is running. Open this link (it contains your private access token):\n")
-    if host in ("0.0.0.0", "::"):
+    if public_url:
+        print(f"  {public_url}/?token={token}")
+    elif host in ("0.0.0.0", "::"):
         ip = lan_ip()
         print(f"  this computer:  {scheme}://localhost:{port}/?token={token}")
         if ip:
@@ -302,10 +326,14 @@ def serve(store: MemoryStore, host: str = "127.0.0.1", port: int = 8765,
     else:
         print(f"  {scheme}://{shown_host}:{port}/?token={token}")
     print("\nPress Ctrl+C to stop. Open conversations are saved to memory when you stop.")
+    if open_browser:
+        import webbrowser
+
+        threading.Timer(0.8, webbrowser.open, args=(f"{scheme}://localhost:{port}/?token={token}",)).start()
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print("\nSaving open conversations...")
+        print("\nSaving open conversations...", flush=True)
     finally:
         stop.set()
         httpd.server_close()

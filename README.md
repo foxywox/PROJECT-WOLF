@@ -6,12 +6,25 @@ give you more tailored help the longer you use it. It runs on Claude.
 
 ## Get started
 
-```bash
-pip install -e .                 # installs the `wolf` command
-export ANTHROPIC_API_KEY=...     # or: ant auth login
+You need [Python 3.10+](https://www.python.org/downloads/) and a Claude API key
+([create one here](https://console.anthropic.com/settings/keys); WOLF walks you through it).
 
-wolf serve                       # open WOLF in your browser (phone + desktop, with voice)
-wolf                             # or talk in the terminal; type 'bye' when you're done
+1. Download this repository: on GitHub, choose **Code → Download ZIP**, then unzip it.
+2. Start WOLF:
+   - **Mac:** double-click `start-wolf.command`. If macOS says it can't verify the developer,
+     right-click the file, choose **Open**, then **Open** again (only needed the first time).
+   - **Windows:** double-click `start-wolf.bat`.
+   - **Linux:** run `./start-wolf.command`.
+3. The first time, it sets itself up (about a minute) and asks you to paste your API key.
+   Then WOLF opens in your browser. Next time, it just opens.
+
+Prefer the terminal?
+
+```bash
+pip install -e .        # installs the `wolf` command
+wolf setup              # connect to Claude (saves your key in ~/.wolf, readable only by you)
+wolf serve --open       # open the app in your browser
+wolf                    # or talk right in the terminal; type 'bye' when you're done
 ```
 
 ## The WOLF app (phone, desktop, voice)
@@ -48,7 +61,8 @@ the link. To revoke it, delete that file and restart `wolf serve`.
 
 | Command | What it does |
 |---|---|
-| `wolf serve` | Open the WOLF app (see above) |
+| `wolf setup` | Connect WOLF to Claude (paste your API key once) |
+| `wolf serve` | Run the WOLF app (`--open` opens your browser) |
 | `wolf` / `wolf chat` | Have a conversation in the terminal |
 | `wolf ask "..."` | Ask one question |
 | `wolf memory [words]` | See everything WOLF remembers, or search it |
@@ -81,6 +95,23 @@ your user account:
 
 It is **never** stored in this repository. WOLF won't save passwords, keys, account numbers,
 or similar secrets. Delete or edit any file at any time. To reset WOLF completely, delete the folder.
+
+## Hosting WOLF online (optional)
+
+To use WOLF from anywhere without leaving a computer on, run it on a hosting service that
+runs Docker containers and offers a persistent disk. The included `Dockerfile` is ready:
+
+- Mount a persistent disk at `/data`. That's where WOLF's memory of you lives; without it,
+  WOLF forgets everything on each restart.
+- Set these secrets:
+  - `ANTHROPIC_API_KEY`: your Claude key.
+  - `WOLF_TOKEN`: a long random password (at least 16 characters). Your link is
+    `https://<your-app-address>/?token=<WOLF_TOKEN>`.
+  - `WOLF_PUBLIC_URL` (optional): your app's address, so the startup log prints the full link.
+- The container listens on port `8080`, or `$PORT` if your host sets one. Hosts give you
+  https automatically, so voice works on your phone.
+
+On shutdown or redeploy, WOLF saves any open conversations to memory first.
 
 ## For development
 

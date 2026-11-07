@@ -18,7 +18,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["wolf", "wolf_assistant"]
+packages = ["wolf", "wolf.web", "wolf_assistant"]
 
 [tool.setuptools.package-data]
-wolf = ["web/*"]
+"wolf.web" = ["*"]

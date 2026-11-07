@@ -22,6 +22,16 @@ memory, and you can talk to it in a web app (`wolf serve`, phone + desktop, voic
   stored in localStorage, stripped from the URL. Voice uses the browser Web Speech API
   (SpeechRecognition + speechSynthesis), so it needs a secure context: localhost or https.
   Transcript is kept in localStorage for display only; the server holds the real conversation.
+- `wolf/config.py`: credentials. `wolf setup` saves the API key in `$WOLF_HOME/config.json`
+  (0600); `make_client` prefers env `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN`, then the saved
+  key, then an `ant auth login` profile. `check_key` validates with `models.retrieve` (no
+  tokens). Commands that need Claude run setup interactively if no credentials (TTY) or print
+  `NOT_SET_UP` and exit 2.
+- Launchers: `start-wolf.command` (Mac double-click / Linux) and `start-wolf.bat` (Windows)
+  create `.venv`, install (output to `.venv/install.log`), then `wolf serve --open`.
+- Hosting: `Dockerfile` (python:3.12-slim, `WOLF_HOME=/data`, `WOLF_HOST=0.0.0.0`, `PORT=8080`).
+  Env: `WOLF_TOKEN` (fixed access token, >=16 chars), `WOLF_PUBLIC_URL` (printed link).
+  SIGTERM is handled like Ctrl+C so open conversations are reflected on before exit.
 - `wolf/cli.py`: `wolf` command. Offline subcommands (`memory`, `forget`, `profile`, `journal`)
   touch only `MemoryStore`; `chat`/`ask` build an agent and call `reflect` on exit.
 - `wolf/assistant.py`: `SYSTEM_PROMPT` (persona, learning rules, secret-storage ban),
@@ -42,7 +52,11 @@ memory, and you can talk to it in a web app (`wolf serve`, phone + desktop, voic
 ## How to run
 
 - Tests (offline, fake client): `python3 -m pytest -q` (`tests/test_server.py` runs a real
-  HTTP server on a random port)
+  HTTP server on a random port and a SIGTERM test via subprocess)
+- Container (verified 2026-11-07: build, auth, volume persistence, graceful stop):
+  `docker build -t wolf . && docker run -p 8080:8080 -v wolfdata:/data -e ANTHROPIC_API_KEY=... -e WOLF_TOKEN=... wolf`.
+  In Claude Code's cloud sandbox the build needs the proxy CA (`--build-context ca=/root/.ccr`
+  plus `PIP_CERT`) via a test-only Dockerfile copy; never commit that.
 - Web app: `wolf serve` (localhost) or `wolf serve --host 0.0.0.0` (phone on same Wi-Fi)
 - Install: `pip install -e .` gives `wolf` and `wolf-dev`
 - Live use needs `ANTHROPIC_API_KEY` or `ant auth login`
@@ -55,6 +69,10 @@ memory, and you can talk to it in a web app (`wolf serve`, phone + desktop, voic
 - CSS: `[hidden] { display: none !important; }` is required because components set `display`
   (a missing rule once left the lock screen covering the app).
 - The loop emits raw text only; terminal newlines are printed by the CLIs, not the loop.
+- Progress callbacks (`out`, `on_tool`) go through `AgentLoop._notify`, which swallows errors:
+  a closed browser stream must never abort a turn or lose a memory write.
+- Without credentials the SDK raises `TypeError("Could not resolve authentication method")`,
+  not an API error; `server._friendly` maps it to `NOT_SET_UP`.
 - New tools: define with `wolf.loop.tool(...)`, validate with `validate(...)` before running.
 
 ## Decisions
@@ -69,7 +87,7 @@ memory, and you can talk to it in a web app (`wolf serve`, phone + desktop, voic
 
 ## Open questions
 
-- Hosting WOLF so it's reachable without a computer running at home (currently: Tailscale).
+- Hosting provider for the `Dockerfile` (needs a persistent disk at /data): owner's choice.
 - Messaging-app interface (e.g. Telegram/SMS)?
 - Better voices: browser speech synthesis varies by device; consider Claude-independent TTS.
 - Integrations to learn from (calendar, email, notes, files)?

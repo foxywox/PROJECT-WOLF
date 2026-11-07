@@ -117,7 +117,7 @@ class AgentLoop:
 
             results = []
             for block in tool_uses:
-                self.on_tool(block.name, block.input)
+                self._notify(self.on_tool, block.name, block.input)
                 try:
                     content, is_error = self.toolbox.call(block.name, block.input), False
                 except ToolError as e:
@@ -129,6 +129,15 @@ class AgentLoop:
             self.messages.append({"role": "user", "content": results})
         self.out("\n[stopped: reached the turn limit]\n")
         return final_text
+
+    @staticmethod
+    def _notify(callback: Callable[..., None], *args: Any) -> None:
+        """Progress callbacks (terminal, browser stream) must never break a turn: if the
+        listener is gone, the turn still finishes and its memory updates are kept."""
+        try:
+            callback(*args)
+        except Exception:
+            pass
 
     def _stream_turn(self):
         with self.client.beta.messages.stream(
@@ -146,7 +155,7 @@ class AgentLoop:
             fallbacks="default",
         ) as stream:
             for text in stream.text_stream:
-                self.out(text)
+                self._notify(self.out, text)
             return stream.get_final_message()
 
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from .config import make_client
 from .loop import AgentLoop, ToolError, tool, validate
 from .memory import MemoryStore
 
@@ -116,6 +117,8 @@ def build_system(store: MemoryStore, max_memories: int = 150) -> list[dict[str, 
 
 def build_wolf(store: MemoryStore, web: bool = True, **kwargs) -> AgentLoop:
     server_tools = [{"type": "web_search_20260209", "name": "web_search", "max_uses": 5}] if web else []
+    if kwargs.get("client") is None:
+        kwargs["client"] = make_client(store.home)
     return AgentLoop(MemoryTools(store), build_system(store), server_tools=server_tools, **kwargs)
 
 
@@ -123,11 +126,11 @@ def reflect(agent: AgentLoop, store: MemoryStore) -> str:
     """End-of-conversation pass: save anything missed, then journal a one-line summary."""
     if not any(m["role"] == "assistant" for m in agent.messages if isinstance(m, dict)):
         return ""
-    quiet = agent.out
-    agent.out = lambda _s: None
+    saved = agent.out, agent.on_tool
+    agent.out = agent.on_tool = lambda *_a: None  # reflection runs silently
     try:
         summary = agent.ask(REFLECT_PROMPT).strip()
     finally:
-        agent.out = quiet
+        agent.out, agent.on_tool = saved
     store.add_journal(summary)
     return summary

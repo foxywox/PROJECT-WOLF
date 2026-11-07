@@ -159,3 +159,43 @@ def test_bad_requests(server):
         with pytest.raises(urllib.error.HTTPError) as e:
             _req(server, "/api/chat", "POST", body)
         assert e.value.code == 400
+
+
+def test_end_still_saves_after_browser_disconnected(server):
+    """The last request's stream is closed by the time the conversation is saved."""
+    def closed(*_a):
+        raise ValueError("I/O operation on closed file.")
+
+    conv = server.app.open(None)
+    server.app.chat(conv, "Juno!", on_text=lambda t: None, on_tool=lambda n: None)
+    agent = server.app.conversations[conv].agent
+    agent.out, agent.on_tool = closed, closed  # what the handler leaves behind after it returns
+    # a later turn whose stream dies mid-way must still finish and keep its memory
+    server.app.chat(conv, "more", on_text=closed, on_tool=closed)
+    assert server.app.end(conv) == "Chatted about Juno."
+    assert "Chatted about Juno." in server.store.recent_journal()[-1]
+
+
+def test_sigterm_shuts_down_gracefully(tmp_path):
+    """Hosts stop containers with SIGTERM; WOLF must save open conversations, not die."""
+    import os
+    import signal
+    import subprocess
+    import sys
+    import time
+
+    env = {**os.environ, "WOLF_HOME": str(tmp_path), "ANTHROPIC_API_KEY": "sk-ant-test", "PORT": "0"}
+    proc = subprocess.Popen([sys.executable, "-m", "wolf", "serve"], env=env, stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT, text=True)
+    try:
+        deadline = time.time() + 10
+        out = ""
+        while "WOLF is running" not in out and time.time() < deadline:
+            out += proc.stdout.readline()
+        assert "WOLF is running" in out
+        proc.send_signal(signal.SIGTERM)
+        rest, _ = proc.communicate(timeout=10)
+    finally:
+        proc.kill()
+    assert proc.returncode == 0
+    assert "Saving open conversations" in rest
