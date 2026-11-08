@@ -16,14 +16,15 @@ if not defined PY (
   pause & exit /b 1
 )
 
-if not exist ".venv\Scripts\wolf.exe" (
+if not exist ".venv\Scripts\python.exe" (
   echo Setting up WOLF ^(first run takes a minute^)...
   %PY% -m venv .venv || (pause & exit /b 1)
   ".venv\Scripts\python.exe" -m pip install --upgrade pip > ".venv\install.log" 2>&1
-  ".venv\Scripts\python.exe" -m pip install -e . >> ".venv\install.log" 2>&1 || (
-    echo Setup failed. Details are in .venv\install.log
-    pause & exit /b 1
-  )
+)
+rem Every start: install anything new WOLF needs (quick when nothing changed).
+".venv\Scripts\python.exe" -m pip install -e . >> ".venv\install.log" 2>&1 || (
+  echo Setup failed. Details are in .venv\install.log
+  pause & exit /b 1
 )
 
 rem Add --host 0.0.0.0 to use WOLF from your phone on the same Wi-Fi.
