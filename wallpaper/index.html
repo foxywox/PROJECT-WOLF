@@ -3,288 +3,393 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>WOLF Blueprint</title>
+<title>WOLF Ember Forest</title>
 <!--
-  WOLF Blueprint: a live desktop wallpaper (Wallpaper Engine web wallpaper, or any browser).
-  The wolf is drawn from triangles, one or more per item of WOLF's production plan:
-  done = filled, in progress = glowing, planned = faint outline. Data comes straight from the
-  public GitHub repo (hub/plan.json, hub/progress.json, recent commits), so it changes as
-  WOLF is built, with no server running on this computer.
+  WOLF Ember Forest: a live desktop wallpaper (Wallpaper Engine web wallpaper, or any browser).
+  An autumn forest at golden hour. A wolf sits on a rock by the water, made of facets, one group
+  per item of WOLF's production plan: finished items glow in warm fur tones, the item being
+  built pulses, and the rest is still a dark silhouette. Data comes straight from the public
+  GitHub repo (hub/plan.json, hub/progress.json), so the wolf changes as WOLF is built, with no
+  server running on this computer. The scene is drawn in code: no image files.
 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@100;300;400&display=swap">
 <style>
-  /* Layout: blueprint sheet; the wolf on the left two-thirds, a quiet status column on the right. */
   :root {
-    --paper: #0b1d33;
-    --grid: rgba(127, 179, 255, .07);
-    --grid-strong: rgba(127, 179, 255, .13);
-    --line: #7fb3ff;
-    --ink: #e6f0ff;
-    --muted: #8ea6c7;
-    --accent: #5ee0c1;
-    --warm: #ffb85c;
-    --card: rgba(9, 24, 44, .72);
-    --display: "Bahnschrift", "DIN Alternate", "Segoe UI", system-ui, sans-serif;
-    --mono: "Cascadia Mono", "Consolas", ui-monospace, monospace;
+    --ink: #f0663e;
+    --ink-soft: rgba(240, 102, 62, .78);
+    --glow: rgba(255, 140, 70, .35);
+    --thin: "Josefin Sans", "Segoe UI Light", "Segoe UI", system-ui, sans-serif;
     color-scheme: dark;
   }
-  * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; }
-  body {
-    background:
-      linear-gradient(var(--grid-strong) 1px, transparent 1px) 0 0 / 120px 120px,
-      linear-gradient(90deg, var(--grid-strong) 1px, transparent 1px) 0 0 / 120px 120px,
-      linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 24px 24px,
-      linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 24px 24px,
-      radial-gradient(ellipse at 35% 45%, #12325a 0%, var(--paper) 65%);
-    color: var(--ink);
-    font: 1.6vh/1.45 "Segoe UI", system-ui, sans-serif;
-    overflow: hidden;
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 3vw;
-    padding: 5vh 4vw;
+  html, body { margin: 0; height: 100%; background: #12070a; overflow: hidden; }
+  canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+  .clock {
+    position: fixed; left: 9vw; top: 37vh; color: var(--ink); font-family: var(--thin);
+    text-align: center; text-shadow: 0 0 2.2vh var(--glow); user-select: none; pointer-events: none;
   }
-  body.no-panel { grid-template-columns: 1fr; }
-  body.no-panel aside { display: none; }
-  @media (max-aspect-ratio: 1/1) { body { grid-template-columns: 1fr; grid-template-rows: 1.2fr 1fr; } }
-
-  .stage { position: relative; display: grid; place-items: center; min-height: 0; }
-  .stage svg { width: min(100%, 78vh); height: auto; overflow: visible; }
-  .tri { stroke: var(--line); stroke-width: .35; stroke-linejoin: round; fill: transparent; transition: fill 1.2s, stroke-opacity 1.2s, opacity 1.2s; }
-  .tri.todo { stroke-opacity: .35; stroke-dasharray: 1.6 1.4; }
-  .tri.idea { stroke-opacity: .16; stroke-dasharray: .8 2; }
-  .tri.done { fill: url(#doneFill); stroke-opacity: .9; }
-  .tri.active { fill: var(--warm); fill-opacity: .25; stroke: var(--warm); animation: pulse 2.4s ease-in-out infinite; }
-  .tri.fresh { animation: settle 3.5s ease-out 1; }
-  @keyframes pulse { 50% { fill-opacity: .55; } }
-  @keyframes settle { 0% { fill: #ffffff; } 100% { fill: url(#doneFill); } }
-  .eye { fill: var(--warm); filter: url(#glow); }
-  .label { position: absolute; left: 0; bottom: 0; font-family: var(--mono); color: var(--muted); font-size: 1.3vh; letter-spacing: .06em; }
-  .title-block { position: absolute; left: 0; top: 0; }
-  .title-block h1 { font-family: var(--display); font-weight: 600; font-size: 7vh; letter-spacing: .28em; margin: 0; line-height: 1; }
-  .title-block p { margin: .6vh 0 0; color: var(--muted); font-family: var(--mono); font-size: 1.4vh; letter-spacing: .12em; text-transform: uppercase; }
-
-  aside { display: flex; flex-direction: column; gap: 2.2vh; min-width: 0; align-self: center; }
-  .card { background: var(--card); border: 1px solid rgba(127, 179, 255, .22); border-radius: 1.2vh; padding: 1.8vh 2vh; backdrop-filter: blur(2px); min-width: 0; }
-  .eyebrow { font-family: var(--mono); font-size: 1.15vh; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: .8vh; }
-  .big { font-family: var(--display); font-size: 4.4vh; line-height: 1; font-variant-numeric: tabular-nums; }
-  .big small { font-size: 1.8vh; color: var(--muted); margin-left: .6vh; letter-spacing: .02em; }
-  .bar { height: .7vh; border-radius: 1vh; background: rgba(127, 179, 255, .15); overflow: hidden; margin: 1.2vh 0 .9vh; }
-  .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--line)); transition: width 1.5s ease; }
-  .work-title { font-weight: 600; font-size: 1.9vh; }
-  .muted { color: var(--muted); }
-  ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .9vh; }
-  li { display: grid; grid-template-columns: 1fr auto; gap: 1vh; align-items: baseline; min-width: 0; }
-  li span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  li time, .tag { font-family: var(--mono); font-size: 1.15vh; color: var(--muted); white-space: nowrap; }
-  .tag.you { color: var(--warm); }
-  li.new span:first-child { color: var(--accent); }
-  li.new span:first-child::before { content: "new  "; font-family: var(--mono); font-size: 1.1vh; color: var(--accent); }
-  footer { font-family: var(--mono); font-size: 1.1vh; color: var(--muted); letter-spacing: .05em; }
-  .paused * { animation-play-state: paused !important; }
-  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  .day { font-weight: 300; font-size: 11.5vh; letter-spacing: 3.2vh; line-height: 1; margin-right: -3.2vh; }
+  .date { font-weight: 300; font-size: 2.9vh; letter-spacing: .5vh; margin-top: 2.4vh; }
+  .time { font-weight: 300; font-size: 2.9vh; letter-spacing: .5vh; margin-top: .6vh; }
+  .wolf-line { font-weight: 300; font-size: 1.75vh; letter-spacing: .45vh; margin-top: 5.2vh; color: var(--ink-soft); text-transform: uppercase; }
+  .wolf-line + .wolf-line { margin-top: .9vh; }
+  .hidden { display: none; }
 </style>
 </head>
 <body>
-  <section class="stage" aria-label="WOLF, assembled from its production plan">
-    <div class="title-block"><h1>WOLF</h1><p id="subtitle">Under construction</p></div>
-    <svg id="wolf" viewBox="0 0 200 200" role="img" aria-label="Wolf blueprint">
-      <defs>
-        <linearGradient id="doneFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" style="stop-color: var(--accent)" stop-opacity=".85"/>
-          <stop offset="1" stop-color="#3b7fd9" stop-opacity=".7"/>
-        </linearGradient>
-        <filter id="glow" x="-200%" y="-200%" width="500%" height="500%"><feGaussianBlur stdDeviation="1.4" result="b"/>
-          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-      </defs>
-      <g id="tris"></g>
-      <ellipse class="eye" cx="73" cy="99" rx="3" ry="1.7"/>
-      <ellipse class="eye" cx="127" cy="99" rx="3" ry="1.7"/>
-    </svg>
-    <div class="label" id="sheet">SHEET 01 · WOLF · PLAN-DRIVEN ASSEMBLY</div>
-  </section>
-
-  <aside>
-    <div class="card">
-      <div class="eyebrow">Production plan</div>
-      <div class="big" id="plan-count">--<small>items done</small></div>
-      <div class="bar"><i id="plan-bar"></i></div>
-      <div class="muted" id="plan-phase"></div>
-    </div>
-    <div class="card">
-      <div class="eyebrow">Being built now</div>
-      <div class="work-title" id="work-title">Waiting for data</div>
-      <div class="bar"><i id="work-bar"></i></div>
-      <div class="muted" id="work-now"></div>
-    </div>
-    <div class="card">
-      <div class="eyebrow">Latest changes</div>
-      <ul id="commits"><li><span class="muted">Loading…</span></li></ul>
-    </div>
-    <div class="card">
-      <div class="eyebrow">Up next</div>
-      <ul id="next"></ul>
-    </div>
-    <footer id="status">Connecting to GitHub…</footer>
-  </aside>
+<canvas id="scene" aria-label="WOLF, a wolf assembling itself in an autumn forest"></canvas>
+<div class="clock" id="clock">
+  <div class="day" id="day">SATURDAY</div>
+  <div class="date" id="date"></div>
+  <div class="time" id="time"></div>
+  <div class="wolf-line" id="wolf-status">WOLF · waking up</div>
+  <div class="wolf-line" id="wolf-next"></div>
+</div>
 
 <script>
 "use strict";
 /* ---------- settings (Wallpaper Engine properties override these) ---------- */
-const cfg = { repo: "foxywox/PROJECT-WOLF", branch: "", refreshMinutes: 2, showPanel: true };
+const cfg = { repo: "foxywox/PROJECT-WOLF", branch: "", refreshMinutes: 2, hour24: true, particles: 1 };
 
-/* ---------- the wolf: a low-poly head, left half mirrored ---------- */
-const V = { A: [40, 10], B: [70, 55], C: [30, 70], D: [100, 45], M: [100, 78], E: [74, 82], F: [58, 98], G: [24, 112],
-            N: [88, 104], O: [100, 118], H: [44, 142], I: [80, 138], J: [100, 152], L: [72, 170], K: [100, 184] };
-const LEFT = ["ABC", "CBE", "BDM", "BME", "CEF", "CFG", "EMN", "ENF", "MON", "FNI", "FIH", "FHG", "NOI", "OJI", "HIL", "IJL", "JKL"];
-const mirror = ([x, y]) => [200 - x, y];
-const TRIS = [];
-for (const t of LEFT) {
-  const pts = [...t].map((k) => V[k]);
-  TRIS.push(pts, pts.map(mirror));
-}
-// Assemble from the ears down: sort by height, then from the outside in.
-TRIS.sort((a, b) => {
-  const cy = (p) => (p[0][1] + p[1][1] + p[2][1]) / 3, cx = (p) => Math.abs((p[0][0] + p[1][0] + p[2][0]) / 3 - 100);
-  return cy(a) - cy(b) || cx(b) - cx(a);
-});
-const group = document.getElementById("tris");
-const polys = TRIS.map((pts) => {
-  const p = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-  p.setAttribute("points", pts.map((q) => q.join(",")).join(" "));
-  p.setAttribute("class", "tri todo");
-  group.appendChild(p);
-  return p;
-});
-
-/* ---------- helpers ---------- */
+/* ---------- small helpers ---------- */
 const $ = (id) => document.getElementById(id);
 const store = { get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
                 set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* fine */ } } };
-function ago(t) {
-  const m = Math.round((Date.now() - new Date(t).getTime()) / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return m + " min ago";
-  if (m < 1440) return Math.round(m / 60) + " h ago";
-  return Math.round(m / 1440) + " d ago";
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+/* ---------- the wolf: a sitting silhouette facing left, cut into facets ---------- */
+// Outline in a 100 x 120 box (x right, y down). Facing left, watching the water.
+const OUTLINE = [
+  [6, 34], [10, 30], [18, 27], [24, 23], [30, 19], [33, 3], [39, 15], [43, 14], [47, 4], [50, 20], [54, 28],
+  [60, 40], [70, 54], [82, 66], [90, 80], [94, 96], [100, 101], [110, 96], [121, 103], [112, 110], [98, 113],
+  [86, 113], [72, 114], [62, 113], [57, 106], [52, 104], [52, 113], [39, 114], [38, 108], [40, 98], [36, 82],
+  [31, 64], [26, 52], [21, 46], [15, 42], [9, 39],
+];
+// Extra points inside the body so the facets look like low-poly fur rather than slivers.
+const INNER = [[20, 34], [28, 30], [36, 24], [44, 24], [36, 38], [48, 40], [30, 46], [42, 54], [56, 56], [34, 72],
+  [48, 70], [64, 70], [76, 76], [44, 88], [60, 88], [78, 92], [86, 102], [66, 102], [104, 104], [50, 98]];
+
+function inside(p, poly) {
+  let c = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i], [xj, yj] = poly[j];
+    if ((yi > p[1]) !== (yj > p[1]) && p[0] < (xj - xi) * (p[1] - yi) / (yj - yi) + xi) c = !c;
+  }
+  return c;
 }
-function li(text, right, cls) {
-  const el = document.createElement("li");
-  if (cls) el.className = cls;
-  const a = document.createElement("span"); a.textContent = text;
-  const b = document.createElement(right && right.time ? "time" : "span");
-  b.className = right && right.cls || "tag"; b.textContent = right ? right.text : "";
-  el.append(a, b);
-  return el;
+// Bowyer-Watson Delaunay triangulation, keeping only triangles whose centre is inside the outline.
+function triangulate(points, outline) {
+  const pts = points.concat([[-1000, -1000], [1000, -1000], [0, 1000]]);
+  let tris = [[pts.length - 3, pts.length - 2, pts.length - 1]];
+  const circ = (t) => {
+    const [a, b, c] = t.map((i) => pts[i]);
+    const d = 2 * (a[0] * (b[1] - c[1]) + b[0] * (c[1] - a[1]) + c[0] * (a[1] - b[1]));
+    const ux = ((a[0] ** 2 + a[1] ** 2) * (b[1] - c[1]) + (b[0] ** 2 + b[1] ** 2) * (c[1] - a[1]) + (c[0] ** 2 + c[1] ** 2) * (a[1] - b[1])) / d;
+    const uy = ((a[0] ** 2 + a[1] ** 2) * (c[0] - b[0]) + (b[0] ** 2 + b[1] ** 2) * (a[0] - c[0]) + (c[0] ** 2 + c[1] ** 2) * (b[0] - a[0])) / d;
+    return [ux, uy, (a[0] - ux) ** 2 + (a[1] - uy) ** 2];
+  };
+  for (let i = 0; i < points.length; i++) {
+    const p = pts[i];
+    const bad = tris.filter((t) => { const [x, y, r] = circ(t); return (p[0] - x) ** 2 + (p[1] - y) ** 2 < r; });
+    const edges = [];
+    for (const t of bad) for (const e of [[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]]) {
+      const k = edges.findIndex((f) => (f[0] === e[1] && f[1] === e[0]) || (f[0] === e[0] && f[1] === e[1]));
+      if (k >= 0) edges.splice(k, 1); else edges.push(e);
+    }
+    tris = tris.filter((t) => !bad.includes(t)).concat(edges.map((e) => [e[0], e[1], i]));
+  }
+  return tris.filter((t) => t.every((i) => i < points.length))
+    .map((t) => t.map((i) => pts[i]))
+    .filter((t) => inside([(t[0][0] + t[1][0] + t[2][0]) / 3, (t[0][1] + t[1][1] + t[2][1]) / 3], outline));
 }
-async function getJSON(url) {
-  const r = await fetch(url, { cache: "no-store" });
-  if (!r.ok) throw new Error(r.status + " " + url.split("/").slice(-2).join("/"));
-  return r.json();
+const FACETS = triangulate(OUTLINE.concat(INNER), OUTLINE)
+  .map((pts) => ({ pts, cx: (pts[0][0] + pts[1][0] + pts[2][0]) / 3, cy: (pts[0][1] + pts[1][1] + pts[2][1]) / 3 }))
+  .sort((a, b) => a.cy - b.cy || a.cx - b.cx); // assembles from the ears down
+FACETS.forEach((f, i) => { f.shade = rng(i * 7919 + 13)(); f.state = "todo"; });
+const EYE = [24, 29];
+
+/* ---------- canvas setup ---------- */
+const canvas = $("scene"), ctx = canvas.getContext("2d");
+let W = 0, H = 0, DPR = 1, backdrop = null, wolfBox = null;
+const LIGHT = () => [W * 0.6, H * 0.08];
+const HORIZON = () => H * 0.72;
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+  const s = H * 0.56 / 120;
+  wolfBox = { x: W * 0.6 - 60 * s, y: H * 0.651 - 113 * s, s };
+  buildBackdrop();
 }
 
-/* ---------- rendering ---------- */
-function renderPlan(plan) {
-  const items = (plan.phases || []).flatMap((p) => (p.items || []).map((i) => ({ ...i, phase: p.name })));
+/* ---------- the forest (drawn once per resize/data change, then reused every frame) ---------- */
+function buildBackdrop() {
+  const off = document.createElement("canvas");
+  off.width = canvas.width; off.height = canvas.height;
+  const g = off.getContext("2d");
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const R = rng(20261107);
+  const [lx, ly] = LIGHT(), hz = HORIZON();
+
+  // Sky glow
+  const grad = g.createRadialGradient(lx, ly, 0, lx, ly, Math.hypot(W, H) * 0.85);
+  grad.addColorStop(0, "#fff0c4"); grad.addColorStop(0.08, "#ffc477"); grad.addColorStop(0.24, "#f07a35");
+  grad.addColorStop(0.45, "#a8341c"); grad.addColorStop(0.7, "#4a1311"); grad.addColorStop(1, "#14070a");
+  g.fillStyle = grad; g.fillRect(0, 0, W, H);
+
+  // Distant trees, soft and warm
+  g.filter = `blur(${Math.max(2, W / 500)}px)`;
+  for (let i = 0; i < 26; i++) {
+    const x = R() * W, w = W * (0.006 + R() * 0.014);
+    const dist = Math.abs(x - lx) / W;
+    g.fillStyle = `rgba(${70 + dist * 20}, ${22 + dist * 6}, 18, ${0.35 + dist * 0.4})`;
+    g.beginPath(); g.moveTo(x - w, hz); g.lineTo(x - w * 0.55, 0); g.lineTo(x + w * 0.55, 0); g.lineTo(x + w, hz); g.fill();
+  }
+  // Canopy: masses of orange and red leaves, brighter near the light
+  g.filter = `blur(${Math.max(4, W / 260)}px)`;
+  for (let i = 0; i < 520; i++) {
+    const x = R() * W, y = Math.pow(R(), 1.6) * H * 0.62, r = W * (0.01 + R() * 0.035);
+    const near = Math.max(0, 1 - Math.hypot(x - lx, y - ly) / (W * 0.55));
+    g.fillStyle = `hsla(${8 + R() * 26}, 85%, ${22 + near * 38 + R() * 10}%, ${0.08 + R() * 0.16})`;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  }
+  g.filter = "none";
+
+  // Light shafts
+  g.globalCompositeOperation = "lighter";
+  for (let i = 0; i < 9; i++) {
+    const a = Math.PI * (0.38 + R() * 0.42), spread = 0.025 + R() * 0.05, len = H * 1.4;
+    const sg = g.createLinearGradient(lx, ly, lx + Math.cos(a) * len, ly + Math.sin(a) * len);
+    sg.addColorStop(0, "rgba(255, 210, 140, .16)"); sg.addColorStop(1, "rgba(255, 140, 60, 0)");
+    g.fillStyle = sg;
+    g.beginPath(); g.moveTo(lx, ly);
+    g.lineTo(lx + Math.cos(a - spread) * len, ly + Math.sin(a - spread) * len);
+    g.lineTo(lx + Math.cos(a + spread) * len, ly + Math.sin(a + spread) * len); g.fill();
+  }
+  g.globalCompositeOperation = "source-over";
+
+  // Near trees: dark trunks and branches framing the scene
+  const trunk = (x, w, lean, col) => {
+    g.fillStyle = col; g.strokeStyle = col; g.lineCap = "round";
+    g.beginPath(); g.moveTo(x - w, hz + 10); g.quadraticCurveTo(x - w * 0.4 + lean * 0.5, H * 0.4, x - w * 0.2 + lean, -10);
+    g.lineTo(x + w * 0.2 + lean, -10); g.quadraticCurveTo(x + w * 0.4 + lean * 0.5, H * 0.4, x + w, hz + 10); g.fill();
+    for (let b = 0; b < 5; b++) {
+      const by = H * (0.06 + R() * 0.38), dir = R() < 0.5 ? -1 : 1, bl = W * (0.05 + R() * 0.12);
+      g.lineWidth = w * (0.12 + R() * 0.18);
+      g.beginPath(); g.moveTo(x + lean * (1 - by / H), by);
+      g.quadraticCurveTo(x + dir * bl * 0.5, by - H * 0.05, x + dir * bl, by - H * (0.02 + R() * 0.1)); g.stroke();
+    }
+  };
+  trunk(W * 0.06, W * 0.035, W * 0.02, "#1c0a0a");
+  trunk(W * 0.22, W * 0.012, -W * 0.01, "rgba(40, 14, 12, .85)");
+  trunk(W * 0.86, W * 0.03, -W * 0.03, "#1a0909");
+  trunk(W * 0.97, W * 0.02, W * 0.01, "#160808");
+
+  // Near foliage: fine leaves gathered in clusters along the top edge
+  for (let c = 0; c < 26; c++) {
+    const cx = R() * W, cy = Math.pow(R(), 2) * H * 0.26, spread = W * (0.03 + R() * 0.06);
+    for (let i = 0; i < 26; i++) {
+      const x = cx + (R() - 0.5) * spread * 2, y = cy + (R() - 0.5) * spread, r = W * (0.0025 + R() * 0.004);
+      g.fillStyle = `hsla(${4 + R() * 26}, 82%, ${20 + R() * 34}%, ${0.55 + R() * 0.4})`;
+      g.beginPath(); g.ellipse(x, y, r * 1.7, r, R() * Math.PI, 0, Math.PI * 2); g.fill();
+    }
+  }
+  for (let i = 0; i < 0; i++) {
+    const x = 0, y = 0, r = 0;
+    g.beginPath(); g.ellipse(x, y, r * 1.6, r, R() * Math.PI, 0, Math.PI * 2); g.fill();
+  }
+
+  // Far bank, and the rock the wolf sits on
+  g.fillStyle = "#170909";
+  g.beginPath(); g.moveTo(0, hz); g.bezierCurveTo(W * 0.15, hz - H * 0.03, W * 0.3, hz - H * 0.01, W * 0.42, hz);
+  g.lineTo(W * 0.42, hz + 2); g.lineTo(0, hz + 2); g.fill();
+  const rx = W * 0.6;
+  g.fillStyle = "#1b0b0b";
+  g.beginPath(); g.moveTo(rx - W * 0.17, hz + 2); g.lineTo(rx - W * 0.13, H * 0.66); g.lineTo(rx - W * 0.05, H * 0.648);
+  g.lineTo(rx + W * 0.07, H * 0.652); g.lineTo(rx + W * 0.16, H * 0.675); g.lineTo(rx + W * 0.24, hz + 2); g.fill();
+  g.strokeStyle = "rgba(255, 150, 80, .35)"; g.lineWidth = 1.5;
+  g.beginPath(); g.moveTo(rx - W * 0.13, H * 0.66); g.lineTo(rx - W * 0.05, H * 0.648); g.lineTo(rx + W * 0.07, H * 0.652); g.stroke();
+
+  drawWolf(g);
+
+  // Water: a darkened, rippled reflection of everything above the horizon
+  const hzp = Math.round(hz * DPR);
+  g.save(); g.setTransform(1, 0, 0, 1, 0, 0);
+  for (let y = hzp; y < off.height; y += 2) {
+    const srcY = hzp - (y - hzp) - 1;
+    if (srcY < 0) break;
+    g.drawImage(off, 0, srcY, off.width, 2, Math.sin(y * 0.09) * 3 * DPR, y, off.width, 2);
+  }
+  g.restore();
+  const wg = g.createLinearGradient(0, hz, 0, H);
+  wg.addColorStop(0, "rgba(20, 6, 8, .35)"); wg.addColorStop(1, "rgba(10, 3, 6, .85)");
+  g.fillStyle = wg; g.fillRect(0, hz, W, H - hz);
+  g.globalCompositeOperation = "lighter";
+  for (let i = 0; i < 70; i++) {
+    const y = hz + Math.pow(R(), 1.5) * (H - hz), x = R() * W, w = W * (0.02 + R() * 0.08);
+    g.strokeStyle = `rgba(255, 160, 90, ${0.04 + R() * 0.08})`; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x + w, y); g.stroke();
+  }
+  g.globalCompositeOperation = "source-over";
+
+  // Vignette
+  const vg = g.createRadialGradient(W * 0.5, H * 0.45, Math.min(W, H) * 0.35, W * 0.5, H * 0.5, Math.hypot(W, H) * 0.62);
+  vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(8, 2, 4, .78)");
+  g.fillStyle = vg; g.fillRect(0, 0, W, H);
+  backdrop = off;
+}
+
+/* ---------- the wolf ---------- */
+function fur(f) {
+  // Warm fur: lighter where the light hits (higher up), deeper red-orange lower and behind.
+  const lightness = 46 + (1 - f.cy / 120) * 18 + f.shade * 14 - (f.cx > 60 ? 8 : 0);
+  const chest = f.cx < 42 && f.cy > 36 && f.cy < 96;
+  return chest ? `hsl(32, 70%, ${Math.min(88, lightness + 24)}%)` : `hsl(${16 + f.shade * 10}, 78%, ${lightness}%)`;
+}
+const wolfPoint = ([px, py]) => [wolfBox.x + px * wolfBox.s, wolfBox.y + py * wolfBox.s];
+function facetPath(g, f) {
+  const [a, b, c] = f.pts.map(wolfPoint);
+  g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.lineTo(...c); g.closePath();
+}
+function drawWolf(g) {
+  // Silhouette first, so unfinished parts read as a dark wolf against the light.
+  g.fillStyle = "#130707";
+  g.beginPath(); OUTLINE.forEach((p, i) => { const [a, b] = wolfPoint(p); i ? g.lineTo(a, b) : g.moveTo(a, b); }); g.closePath(); g.fill();
+  for (const f of FACETS) {
+    facetPath(g, f);
+    if (f.state === "done") {
+      g.fillStyle = fur(f); g.fill();
+      g.strokeStyle = "rgba(255, 220, 170, .18)"; g.lineWidth = 0.6; g.stroke();
+    } else if (f.state === "active") {
+      g.fillStyle = "rgba(255, 170, 80, .3)"; g.fill();
+      g.strokeStyle = "rgba(255, 210, 140, .7)"; g.lineWidth = 1; g.stroke();
+    } else {
+      g.strokeStyle = f.state === "idea" ? "rgba(255, 130, 70, .08)" : "rgba(255, 130, 70, .2)";
+      g.lineWidth = 0.7; g.stroke();
+    }
+  }
+  // Rim light along the back of the head and neck, and the eye.
+  g.strokeStyle = "rgba(255, 190, 120, .45)"; g.lineWidth = 1.2;
+  g.beginPath(); OUTLINE.slice(0, 15).forEach((p, i) => { const [a, b] = wolfPoint(p); i ? g.lineTo(a, b) : g.moveTo(a, b); }); g.stroke();
+  const headDone = FACETS.filter((f) => f.cy < 32).every((f) => f.state === "done");
+  const [ex, ey] = wolfPoint(EYE);
+  g.fillStyle = headDone ? "#2a0d06" : "rgba(255, 170, 90, .9)";
+  g.beginPath(); g.ellipse(ex, ey, 1.6 * wolfBox.s, 1 * wolfBox.s, -0.3, 0, Math.PI * 2); g.fill();
+}
+
+/* ---------- embers and falling leaves ---------- */
+let embers = [], leaves = [];
+function seedParticles() {
+  const R = rng(Date.now() % 100000);
+  embers = Array.from({ length: Math.round(90 * cfg.particles) }, () => ({ x: R() * W, y: R() * H, r: 0.6 + R() * 1.8,
+    vx: -0.05 - R() * 0.2, vy: -0.08 - R() * 0.25, tw: R() * 6.28 }));
+  leaves = Array.from({ length: Math.round(14 * cfg.particles) }, () => ({ x: R() * W, y: R() * H, s: 3 + R() * 5,
+    vx: -0.2 - R() * 0.4, vy: 0.35 + R() * 0.5, a: R() * 6.28, va: (R() - 0.5) * 0.04, hue: 4 + R() * 20 }));
+}
+
+/* ---------- animation loop (30 fps; stops while Wallpaper Engine pauses) ---------- */
+let paused = false, last = 0, hasActive = false;
+function frame(t) {
+  if (paused) return;
+  requestAnimationFrame(frame);
+  if (t - last < 1000 / 30 || !backdrop) return;
+  last = t;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.drawImage(backdrop, 0, 0);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  if (hasActive) { // the part being built breathes
+    const pulse = (Math.sin(t / 700) + 1) / 2;
+    for (const f of FACETS) if (f.state === "active") {
+      facetPath(ctx, f); ctx.fillStyle = `rgba(255, 170, 80, ${0.1 + pulse * 0.5})`; ctx.fill();
+    }
+  }
+  ctx.globalCompositeOperation = "lighter";
+  for (const e of embers) {
+    e.x += e.vx; e.y += e.vy; e.tw += 0.05;
+    if (e.y < -10 || e.x < -10) { e.y = H + 10; e.x = Math.random() * W * 1.2; }
+    ctx.fillStyle = `rgba(255, ${150 + (e.r * 20 | 0)}, 90, ${0.35 + Math.sin(e.tw) * 0.25})`;
+    ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalCompositeOperation = "source-over";
+  for (const l of leaves) {
+    l.x += l.vx + Math.sin(l.a) * 0.3; l.y += l.vy; l.a += l.va;
+    if (l.y > H + 20) { l.y = -20; l.x = Math.random() * W * 1.2; }
+    ctx.save(); ctx.translate(l.x, l.y); ctx.rotate(l.a);
+    ctx.fillStyle = `hsla(${l.hue}, 80%, 42%, .85)`;
+    ctx.beginPath(); ctx.ellipse(0, 0, l.s, l.s * 0.45, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  }
+}
+
+/* ---------- clock, in the style of a desktop clock widget ---------- */
+function tick() {
+  const d = new Date();
+  $("day").textContent = d.toLocaleDateString("en-US", { weekday: "long" }).toUpperCase();
+  $("date").textContent = `${d.getDate()} ${d.toLocaleDateString("en-US", { month: "short" }).toUpperCase()} ${d.getFullYear()}`;
+  const hh = String(cfg.hour24 ? d.getHours() : d.getHours() % 12 || 12).padStart(2, "0");
+  $("time").textContent = `-${hh}:${String(d.getMinutes()).padStart(2, "0")}-`;
+}
+
+/* ---------- WOLF's plan and progress, from GitHub ---------- */
+function applyPlan(plan, progress) {
+  const items = (plan.phases || []).flatMap((p) => p.items || []);
   if (!items.length) return;
-  const done = items.filter((i) => i.status === "done").length;
-  $("plan-count").innerHTML = "";
-  $("plan-count").append(`${done}/${items.length}`, Object.assign(document.createElement("small"), { textContent: "items done" }));
-  $("plan-bar").style.width = (100 * done / items.length) + "%";
-  const current = (plan.phases || []).find((p) => p.status === "active") || (plan.phases || []).find((p) => p.status === "next");
-  $("plan-phase").textContent = current ? `Now: ${current.name.replace(/^\d+\.\s*/, "")}` : "All phases done";
-  $("subtitle").textContent = done === items.length ? "Complete" : `${Math.round(100 * done / items.length)}% assembled`;
-
-  // Each triangle belongs to one plan item, in plan order.
-  const before = new Set(store.get("wolf.wp.doneTris") || []);
-  const nowDone = [];
-  polys.forEach((poly, t) => {
-    // Mirrored halves sit next to each other after sorting, so pairs share an item: the wolf stays symmetric.
-    const pairs = polys.length / 2;
-    const item = items[Math.min(items.length - 1, Math.floor(Math.floor(t / 2) * items.length / pairs))];
-    const state = item.status === "done" ? "done" : item.status === "active" ? "active" : item.status === "idea" ? "idea" : "todo";
-    poly.setAttribute("class", "tri " + state + (state === "done" && before.size && !before.has(t) ? " fresh" : ""));
-    if (state === "done") nowDone.push(t);
-    const title = poly.querySelector("title") || poly.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "title"));
-    title.textContent = `${item.title} (${item.status})`;
+  FACETS.forEach((f, t) => {
+    const item = items[Math.min(items.length - 1, Math.floor(t * items.length / FACETS.length))];
+    f.state = item.status === "done" ? "done" : item.status === "active" ? "active" : item.status === "idea" ? "idea" : "todo";
   });
-  store.set("wolf.wp.doneTris", nowDone);
-
-  const next = items.filter((i) => i.status === "active" || i.status === "next").slice(0, 5);
-  const ul = $("next"); ul.innerHTML = "";
-  for (const i of next) ul.append(li(i.title, i.who === "human" ? { text: "needs you", cls: "tag you" } : { text: i.status === "active" ? "in progress" : "next" }));
-  if (!next.length) ul.append(li("Nothing queued", null));
+  hasActive = FACETS.some((f) => f.state === "active");
+  const pct = Math.round(100 * items.filter((i) => i.status === "done").length / items.length);
+  let status = `WOLF · ${pct}% awake`;
+  if (progress && progress.status !== "done" && Number(progress.percent) < 100 && progress.title) status += ` · building: ${progress.title}`;
+  $("wolf-status").textContent = status;
+  const waiting = items.filter((i) => (i.status === "next" || i.status === "active") && i.who === "human").length;
+  $("wolf-next").textContent = waiting ? `${waiting} ${waiting === 1 ? "thing needs" : "things need"} you` : "";
+  if (W) buildBackdrop();
 }
 
-function renderProgress(p) {
-  if (!p) return;
-  const pct = Math.max(0, Math.min(100, Math.round(Number(p.percent) || 0)));
-  const done = p.status === "done" || pct >= 100;
-  $("work-title").textContent = done ? `Finished: ${p.title || "last build"}` : (p.title || "Current work");
-  $("work-bar").style.width = pct + "%";
-  $("work-now").textContent = (done ? "Waiting for the next build" : `${pct}% · ${p.current || "working"}`) + (p.updated ? ` · ${ago(p.updated)}` : "");
-}
-
-function renderCommits(commits) {
-  const seen = store.get("wolf.wp.lastSha");
-  const ul = $("commits"); ul.innerHTML = "";
-  commits.slice(0, 6).forEach((c, idx) => {
-    const msg = (c.commit && c.commit.message || "").split("\n")[0];
-    const fresh = seen && idx === 0 && c.sha !== seen;
-    ul.append(li(msg, { text: ago(c.commit.author.date), time: true }, fresh ? "new" : ""));
-  });
-  if (commits[0]) store.set("wolf.wp.lastSha", commits[0].sha);
-}
-
-/* ---------- data ---------- */
-let branch = "", lastOk = 0, timer = null, paused = false;
+let branch = "";
+async function getJSON(url) { const r = await fetch(url, { cache: "no-store" }); if (!r.ok) throw new Error(String(r.status)); return r.json(); }
 async function refresh() {
   if (paused) return;
   try {
     if (!branch) branch = cfg.branch || (await getJSON(`https://api.github.com/repos/${cfg.repo}`)).default_branch;
-    const raw = `https://raw.githubusercontent.com/${cfg.repo}/${encodeURIComponent(branch).replace(/%2F/g, "/")}/hub/`;
-    const t = Date.now();
-    const [plan, progress, commits] = await Promise.all([
-      getJSON(raw + "plan.json?t=" + t),
-      getJSON(raw + "progress.json?t=" + t).catch(() => null),
-      getJSON(`https://api.github.com/repos/${cfg.repo}/commits?sha=${encodeURIComponent(branch)}&per_page=6`),
-    ]);
-    store.set("wolf.wp.cache", { plan, progress, commits });
-    renderPlan(plan); renderProgress(progress); renderCommits(commits);
-    lastOk = Date.now();
-    $("status").textContent = `${cfg.repo} · ${branch} · checked just now`;
-  } catch (e) {
-    $("status").textContent = `Offline or GitHub busy (${e.message}). Showing the last saved view${lastOk ? ", checked " + ago(lastOk) : ""}.`;
-  }
+    const raw = `https://raw.githubusercontent.com/${cfg.repo}/${branch}/hub/`, t = Date.now();
+    const [plan, progress] = await Promise.all([getJSON(raw + "plan.json?t=" + t), getJSON(raw + "progress.json?t=" + t).catch(() => null)]);
+    store.set("wolf.wp2", { plan, progress });
+    applyPlan(plan, progress);
+  } catch { /* offline: keep showing the last saved state */ }
 }
-function schedule() {
-  clearInterval(timer);
-  timer = setInterval(refresh, Math.max(1, cfg.refreshMinutes) * 60000);
-  setInterval(() => { if (lastOk) $("status").textContent = `${cfg.repo} · ${branch} · checked ${ago(lastOk)}`; }, 30000);
-}
+let refreshTimer = null;
+function schedule() { clearInterval(refreshTimer); refreshTimer = setInterval(refresh, Math.max(1, cfg.refreshMinutes) * 60000); }
 
-// Show the last saved view instantly, then fetch fresh data.
-const cached = store.get("wolf.wp.cache");
-if (cached) { renderPlan(cached.plan); renderProgress(cached.progress); renderCommits(cached.commits || []); }
-refresh();
-schedule();
+/* ---------- start ---------- */
+window.addEventListener("resize", () => { resize(); seedParticles(); });
+resize(); seedParticles(); tick();
+setInterval(tick, 1000);
+const saved = store.get("wolf.wp2");
+if (saved) applyPlan(saved.plan, saved.progress);
+refresh(); schedule();
+requestAnimationFrame(frame);
 
 /* ---------- Wallpaper Engine integration (ignored in a normal browser) ---------- */
 function weColor(v) { const [r, g, b] = String(v).split(" ").map((n) => Math.round(Number(n) * 255)); return `rgb(${r}, ${g}, ${b})`; }
 window.wallpaperPropertyListener = {
   applyUserProperties(p) {
     let reload = false;
-    if (p.repo && p.repo.value && p.repo.value !== cfg.repo) { cfg.repo = p.repo.value.trim(); branch = ""; reload = true; }
-    if (p.branch && p.branch.value !== undefined && p.branch.value !== cfg.branch) { cfg.branch = p.branch.value.trim(); branch = ""; reload = true; }
+    if (p.repo && p.repo.value && p.repo.value.trim() !== cfg.repo) { cfg.repo = p.repo.value.trim(); branch = ""; reload = true; }
+    if (p.branch && p.branch.value !== undefined && p.branch.value.trim() !== cfg.branch) { cfg.branch = p.branch.value.trim(); branch = ""; reload = true; }
     if (p.refreshminutes) { cfg.refreshMinutes = Number(p.refreshminutes.value) || 2; schedule(); }
-    if (p.showpanel) document.body.classList.toggle("no-panel", !p.showpanel.value);
-    if (p.accentcolor) document.documentElement.style.setProperty("--accent", weColor(p.accentcolor.value));
+    if (p.showclock) $("clock").classList.toggle("hidden", !p.showclock.value);
+    if (p.showstatus) for (const id of ["wolf-status", "wolf-next"]) $(id).classList.toggle("hidden", !p.showstatus.value);
+    if (p.hour24) { cfg.hour24 = !!p.hour24.value; tick(); }
+    if (p.textcolor) document.documentElement.style.setProperty("--ink", weColor(p.textcolor.value));
+    if (p.particles) { cfg.particles = Number(p.particles.value) / 100; seedParticles(); }
     if (reload) refresh();
   },
   setPaused(isPaused) {
     paused = isPaused;
-    document.body.classList.toggle("paused", isPaused);
-    if (!isPaused) refresh();
+    if (!isPaused) { last = 0; requestAnimationFrame(frame); refresh(); }
   },
 };
 </script>

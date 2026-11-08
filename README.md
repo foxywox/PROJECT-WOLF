@@ -106,12 +106,14 @@ or similar secrets. Delete or edit any file at any time. To reset WOLF completel
 
 ## WOLF as your desktop wallpaper
 
-`wallpaper/` is a live wallpaper: a blueprint of WOLF's head made of triangles, one pair per
-item in the production plan. Finished items fill in, the item being built glows, and planned
-items are dotted outlines, so you watch WOLF assemble as it's built. A side panel shows the
-plan, what's being built now, the latest changes and what's waiting on you. It reads
-everything from this public GitHub repository, so it updates on its own (within about 5
-minutes of each change) without WOLF running on your computer.
+`wallpaper/` is a live wallpaper: an autumn forest at golden hour, with drifting embers and
+falling leaves, a wolf sitting on a rock by the water, and a large day, date and time clock.
+The wolf is made of facets tied to WOLF's production plan: finished items glow in warm fur
+tones, the item being built pulses, and unfinished parts are still a dark silhouette, so you
+watch WOLF come to life as it's built. A line under the clock shows how far along WOLF is
+and how many things are waiting on you. It reads everything from this public GitHub
+repository, so it updates on its own (within about 5 minutes of each change) without WOLF
+running on your computer. The scene is drawn in code, so it's sharp at any resolution.
 
 **Wallpaper Engine** (Windows):
 
@@ -120,8 +122,8 @@ minutes of each change) without WOLF running on your computer.
    pick `wallpaper\index.html`. Alternatively, copy the `wallpaper` folder into
    `Steam\steamapps\common\wallpaper_engine\projects\myprojects\` and it appears in your
    installed wallpapers.
-3. In the wallpaper's settings you can change the repository, branch, how often it checks
-   for changes, the finished-part color, and hide the side panel.
+3. In the wallpaper's settings you can turn the clock or WOLF's status line off, switch
+   to 12-hour time, change the text color, and dial the embers and leaves up or down.
 
 **Any browser:** open `wallpaper/index.html` directly; it works the same.
 

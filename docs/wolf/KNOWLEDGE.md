@@ -88,13 +88,17 @@ memory, and you can talk to it in a web app (`wolf serve`, phone + desktop, voic
   forum; polls `/api/hub` every 20 s while open. Header tabs on desktop, fixed bottom bar
   under 640px (`--tabbar`).
 - `wallpaper/` (owner's desktop wallpaper; Wallpaper Engine `project.json` type "web"):
-  standalone page, no server. Fetches `raw.githubusercontent.com/<repo>/<branch>/hub/plan.json`
-  and `progress.json` (CDN cache ~5 min) and `api.github.com/repos/<repo>/commits` (CORS-open,
-  60 req/h unauthenticated: default refresh 2 min, ~31 calls/h). 34 triangles (17 mirrored
-  pairs) sorted ears-to-chin; pair k maps to plan item floor(k*items/17); done = filled,
-  active = pulsing, idea = faint. Remembers the last view in localStorage; WE properties via
-  `window.wallpaperPropertyListener` (`applyUserProperties`, `setPaused`). Install steps in the
-  README come from memory; docs.wallpaperengine.io was unreachable from the sandbox.
+  "Ember Forest", styled after the owner's own autumn wallpaper (warm golden-hour forest,
+  thin spaced day/date/time clock in orange). One canvas: a backdrop (sky glow, blurred
+  trees and canopy, light shafts, trunks, leaf clusters, rock, rippled water reflection,
+  vignette) rendered once per resize/data change; per frame only embers, leaves and the
+  pulsing "active" facets are drawn (30 fps, stops on `setPaused`). The wolf is a sitting
+  silhouette (`OUTLINE` + `INNER` points, Delaunay-triangulated, facets sorted ears-down);
+  facet t maps to plan item floor(t*items/facets): done = fur color, active = pulse,
+  otherwise dark with a faint ember edge. Data: `raw.githubusercontent.com/<repo>/<branch>/
+  hub/plan.json` and `progress.json` (CDN cache ~5 min), cached in localStorage. Properties:
+  showclock, hour24, showstatus, textcolor, particles, refreshminutes, repo, branch. Install
+  steps in the README are from memory (docs.wallpaperengine.io unreachable from the sandbox).
 - `claude/` + `wolf_assistant/workspace.py`: Claude's workspace. `brief()` assembles protocol,
   HANDOFF, last 3 changelog days, knowledge base, tools, git state, components, repo map
   (`--tests` adds test results). `add_log()` keeps CHANGELOG.md newest-day-first. Tools are

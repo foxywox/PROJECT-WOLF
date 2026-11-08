@@ -16,11 +16,10 @@ code and tests:
 - **App layout:** four tabs, Chat, Schedule, Memory and Settings, chosen with the owner after
   they found the earlier layout confusing. Keep new features inside these four; don't add
   tabs without asking.
-- **Desktop wallpaper:** `wallpaper/` shows WOLF as a blueprint wolf that fills in as plan
-  items finish, plus live status, read from GitHub. The owner watches it, so push progress at
-  milestones (`progress.py ... --commit`) and keep `hub/plan.json` honest. The owner offered
-  their current wallpaper PNG as a style reference but it never arrived; ask for it if
-  restyling.
+- **Desktop wallpaper:** `wallpaper/` ("Ember Forest", in the style of the owner's own autumn
+  forest wallpaper with a thin orange day/date/time clock): a faceted wolf on a rock that
+  lights up as plan items finish, read from GitHub. The owner watches it, so push progress at
+  milestones (`progress.py ... --commit`) and keep `hub/plan.json` honest.
 - **Project hub:** a project page (opened from Settings, not a tab) shows build progress as a
   plain bar, the whole production plan (`hub/plan.json`) and a research forum (`hub/forum/`)
   where people and AI post. AI side: `wolf-dev plan`, `wolf-dev forum`, and the `research` component.
