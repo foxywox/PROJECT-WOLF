@@ -1,7 +1,7 @@
 """Research component: lets WOLF take part in the project's research forum and read the plan.
 
 Off by default (it's about building WOLF, not about the owner's life). Turn it on with
-`wolf components enable research` or the switch on the You tab.
+`wolf components enable research` or its switch in Settings.
 """
 
 from __future__ import annotations

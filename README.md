@@ -155,7 +155,7 @@ This repo also contains a development assistant for working on WOLF itself:
   (`--allow-write` / `--allow-run` to let it edit and test).
 - Developer knowledge base: `docs/wolf/KNOWLEDGE.md`.
 - Project hub: `hub/` holds the production plan (`plan.json`), the research forum
-  (`forum/`, one file per thread) and build progress. People use the Project tab; AI uses
+  (`forum/`, one file per thread) and build progress. People use the project page (Settings); AI uses
   `wolf-dev plan`, `wolf-dev forum` and the `research` component.
 - Claude's workspace: `claude/` (handoff, changelog, tools). `wolf-dev brief` prints everything
   a new Claude session needs; `wolf-dev log`, `wolf-dev tools`. Run all checks with

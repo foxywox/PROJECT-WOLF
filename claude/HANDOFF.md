@@ -39,7 +39,7 @@ to AI. As of now:
 
 1. **Real-world check (active, needs the owner):** first real chat, Windows launcher, voice.
 2. **Personality content (waiting on the owner):** the setting exists; MONTY just needs
-   describing (You tab, "Your own"), or discussing in the forum thread.
+   describing (Settings, Personality, "Your own"), or discussing in the forum thread.
 3. **Learn from your life:** calendar is done. Email and notes are next, each a component.
    Email needs a decision on provider and access (IMAP app password vs OAuth); ask first.
 4. **Proactive help:** reminders exist, but WOLF can only surface them when the app is open

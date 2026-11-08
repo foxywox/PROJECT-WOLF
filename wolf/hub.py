@@ -1,7 +1,7 @@
 """The project hub: WOLF's production plan, its research forum, and build progress.
 
 Everything lives as plain files in the `hub/` folder of the WOLF project, so people (through
-WOLF's Project tab) and AI (Claude sessions, `wolf-dev`, or WOLF itself through the `research`
+WOLF's project page, opened from Settings) and AI (Claude sessions, `wolf-dev`, or WOLF itself through the `research`
 component) read and write exactly the same thing:
 
   hub/plan.json            the production plan: phases -> items, each with a status

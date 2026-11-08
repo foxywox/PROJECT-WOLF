@@ -5,7 +5,7 @@ provide, or with a local .ics file. Links are kept in $WOLF_HOME/config.json (ow
 settings.calendar.calendars and are never shown back in full. Calendars are fetched at most
 every 15 minutes; if a fetch fails, the last good copy is used.
 
-Add one on the You tab in the app, or: wolf calendar add "Work" "<private link>"
+Add one in the app under Settings, Calendar.
 """
 
 from __future__ import annotations
@@ -172,7 +172,7 @@ class CalendarComponent(Component):
 
     def call(self, name: str, args: dict[str, Any]) -> str:
         if not calendars(self.ctx.home):
-            return "No calendar is connected. The user can add one on the You tab in WOLF's app."
+            return "No calendar is connected. The user can connect one in WOLF's app under Settings, Calendar."
         try:
             start = datetime.fromisoformat(args["start_date"]) if args.get("start_date") else None
         except ValueError as e:

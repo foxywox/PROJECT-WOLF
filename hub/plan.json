@@ -148,14 +148,14 @@
           "title": "Owner shares the personality (\"MONTY\")",
           "status": "next",
           "who": "human",
-          "note": "The setting is ready: write MONTY under You, Personality, Your own, or describe it in the forum."
+          "note": "The setting is ready: write MONTY under Settings, Personality, Your own, or describe it in the forum."
         },
         {
           "id": "personality-component",
           "title": "Make the personality a swappable setting",
           "status": "done",
           "who": "claude",
-          "note": "Presets (Balanced, Coach, Calm, Playful, Brief) or your own words; pick on the You tab. MONTY can go in as 'your own'."
+          "note": "Presets (Balanced, Coach, Calm, Playful, Brief) or your own words; pick in Settings. MONTY can go in as 'your own'."
         }
       ]
     },
@@ -170,7 +170,7 @@
           "title": "Calendar component (read-only first)",
           "status": "done",
           "who": "either",
-          "note": "Read-only, any service via its private iCal link; connect on the You tab."
+          "note": "Read-only, any service via its private iCal link; connect in Settings."
         },
         {
           "id": "email",

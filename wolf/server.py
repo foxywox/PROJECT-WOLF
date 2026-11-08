@@ -22,7 +22,7 @@ API (all require `Authorization: Bearer <token>`):
   DELETE /api/calendar/<name> -> removes that calendar
   GET    /api/reminders       -> {"due": [...], "open": [...]}
   POST   /api/reminders       {"text", "due"} -> adds one;  POST /api/reminders/<id>/done
-  GET    /api/hub             -> {"available", "progress", "plan", "threads"}   (Project tab)
+  GET    /api/hub             -> {"available", "progress", "plan", "threads"}   (project page)
   GET    /api/hub/forum/<id>  -> one forum thread with all posts
   POST   /api/hub/forum       {"title", "body", "author", "topic"?} -> new thread (posted as human)
   POST   /api/hub/forum/<id>  {"body", "author"} -> thread with the reply added (posted as human)
