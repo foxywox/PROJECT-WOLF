@@ -4,6 +4,11 @@ Tools and services used outside the repo. Scripts inside the repo are in `claude
   (`--steps "a|b|c" --title T` starts a new build) writes `hub/progress.json`, which WOLF's
   project page (Settings, then "Open the project page") shows as a plain progress bar.
   Commit it with your work.
+- **Owner's desktop wallpaper** (`wallpaper/`, Wallpaper Engine web wallpaper): reads
+  `hub/plan.json`, `hub/progress.json` and recent commits from GitHub, so the owner only sees
+  what's pushed. At real milestones use `progress.py ... --commit` (commits and pushes just
+  `hub/progress.json`); finishing a plan item with `wolf-dev plan set` fills in part of the
+  wolf once pushed.
 - **Live progress window** (artifact "WOLF Build Tracker", owned by the WOLF owner; URL in the
   owner's Claude artifact list): the animated wolf-pup view of the same JSON, for the owner
   to watch while you work. Percent 100 makes the pup howl; 20 minutes without an update

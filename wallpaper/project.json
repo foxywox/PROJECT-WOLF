@@ -1,0 +1,17 @@
+{
+  "title": "WOLF Blueprint",
+  "description": "A live blueprint of WOLF, the personal AI assistant, assembling itself as its production plan gets done. Reads the public PROJECT-WOLF repository on GitHub.",
+  "type": "web",
+  "file": "index.html",
+  "preview": "preview.jpg",
+  "tags": ["Technology", "Abstract"],
+  "general": {
+    "properties": {
+      "repo": { "order": 0, "text": "GitHub repository (owner/name)", "type": "textinput", "value": "foxywox/PROJECT-WOLF" },
+      "branch": { "order": 1, "text": "Branch (leave empty for the default)", "type": "textinput", "value": "" },
+      "refreshminutes": { "order": 2, "text": "Check for changes every (minutes)", "type": "slider", "min": 1, "max": 30, "step": 1, "value": 2 },
+      "showpanel": { "order": 3, "text": "Show the status panel", "type": "bool", "value": true },
+      "accentcolor": { "order": 4, "text": "Finished-part color", "type": "color", "value": "0.368 0.878 0.757" }
+    }
+  }
+}

@@ -87,6 +87,14 @@ memory, and you can talk to it in a web app (`wolf serve`, phone + desktop, voic
   pup scene was removed as redundant with the separate progress window), the plan and the
   forum; polls `/api/hub` every 20 s while open. Header tabs on desktop, fixed bottom bar
   under 640px (`--tabbar`).
+- `wallpaper/` (owner's desktop wallpaper; Wallpaper Engine `project.json` type "web"):
+  standalone page, no server. Fetches `raw.githubusercontent.com/<repo>/<branch>/hub/plan.json`
+  and `progress.json` (CDN cache ~5 min) and `api.github.com/repos/<repo>/commits` (CORS-open,
+  60 req/h unauthenticated: default refresh 2 min, ~31 calls/h). 34 triangles (17 mirrored
+  pairs) sorted ears-to-chin; pair k maps to plan item floor(k*items/17); done = filled,
+  active = pulsing, idea = faint. Remembers the last view in localStorage; WE properties via
+  `window.wallpaperPropertyListener` (`applyUserProperties`, `setPaused`). Install steps in the
+  README come from memory; docs.wallpaperengine.io was unreachable from the sandbox.
 - `claude/` + `wolf_assistant/workspace.py`: Claude's workspace. `brief()` assembles protocol,
   HANDOFF, last 3 changelog days, knowledge base, tools, git state, components, repo map
   (`--tests` adds test results). `add_log()` keeps CHANGELOG.md newest-day-first. Tools are
@@ -147,6 +155,7 @@ memory, and you can talk to it in a web app (`wolf serve`, phone + desktop, voic
 - Default model `claude-opus-5-5`, effort `medium` for chat.
 - 2026-11-07: Every WOLF ability is a swappable component (owner asked for components
   "completely interchangeable with WOLF").
+- 2026-11-08: WOLF as a live desktop wallpaper (owner asked for Wallpaper Engine).
 - 2026-11-08: App reorganized into Chat / Schedule / Memory / Settings; the project plan and
   forum moved off the main tabs to a page opened from Settings; the night-sky tracker removed
   from the app (the owner left the choice of what to remove to Claude).

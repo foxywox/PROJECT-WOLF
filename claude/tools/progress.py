@@ -19,6 +19,8 @@ def main() -> None:
     ap.add_argument("--steps", help="'|'-separated plan; starts a new run (clears notes)")
     ap.add_argument("--title", help="window title")
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
+    ap.add_argument("--commit", action="store_true",
+                    help="also commit and push just this file, so the owner's desktop wallpaper shows it")
     a = ap.parse_args()
 
     d = json.loads(a.out.read_text()) if a.out.exists() and not a.steps else {"log": []}
@@ -35,6 +37,14 @@ def main() -> None:
         d["log"] = (d.get("log", []) + [{"t": now, "text": a.note}])[-12:]
     a.out.write_text(json.dumps(d))
     print(a.out)
+    if a.commit:
+        import subprocess
+        root = Path(__file__).resolve().parents[2]
+        branch = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=root, capture_output=True, text=True).stdout.strip()
+        subprocess.run(["git", "add", str(a.out)], cwd=root, check=True)
+        if subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=root).returncode:
+            subprocess.run(["git", "commit", "-q", "-m", f"Progress: {a.percent}% - {a.current}"], cwd=root, check=True)
+            subprocess.run(["git", "push", "-q", "origin", branch], cwd=root, check=True)
 
 
 if __name__ == "__main__":

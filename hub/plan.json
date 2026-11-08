@@ -107,6 +107,13 @@
           "status": "done",
           "who": "claude",
           "note": "Owner found the old tabs confusing; project plan and forum moved off the main tabs."
+        },
+        {
+          "id": "wallpaper",
+          "title": "Live desktop wallpaper that shows WOLF being built",
+          "status": "done",
+          "who": "claude",
+          "note": "wallpaper/ for Wallpaper Engine or any browser; reads the plan and changes from GitHub."
         }
       ]
     },

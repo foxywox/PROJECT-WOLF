@@ -5,6 +5,7 @@ Newest first. One heading per day; each bullet says what changed and why.
 ## 2026-11-08
 
 - Owner: remove the 'night controls' (redundant) and the UI doesn't make sense; via a quick question they confirmed the You tab was overloaded, the Project tab out of place, and tab names unclear (left 'night controls' to me). Removed the night-sky pup tracker from the app (the separate progress window keeps it) and reorganized into Chat / Schedule (reminders + next 7 days) / Memory (summary, memories, past conversations) / Settings (personality, abilities, calendar, help, link to the project page). Project page is no longer a tab. Screenshots caught lists hugging the left edge on desktop (margin: 0 overriding auto centering); fixed. Reminder form tucked behind '+ Add a reminder'.
+- Owner asked to make WOLF their Wallpaper Engine wallpaper to watch it being built. Built wallpaper/: a standalone blueprint page (no server) that reads the plan, progress and commits from the public GitHub repo; a low-poly wolf head whose 17 mirrored triangle pairs fill in as plan items finish. Wallpaper Engine project.json with properties (repo, branch, refresh, panel, color). progress.py --commit pushes progress so the wallpaper sees it mid-build. Owner mentioned their current wallpaper PNG as a style example, but no file came through; asked them to attach it. WE docs site was unreachable, so the install steps are from memory.
 
 ## 2026-11-07
 

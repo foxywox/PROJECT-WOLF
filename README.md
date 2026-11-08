@@ -104,6 +104,27 @@ your user account:
 It is **never** stored in this repository. WOLF won't save passwords, keys, account numbers,
 or similar secrets. Delete or edit any file at any time. To reset WOLF completely, delete the folder.
 
+## WOLF as your desktop wallpaper
+
+`wallpaper/` is a live wallpaper: a blueprint of WOLF's head made of triangles, one pair per
+item in the production plan. Finished items fill in, the item being built glows, and planned
+items are dotted outlines, so you watch WOLF assemble as it's built. A side panel shows the
+plan, what's being built now, the latest changes and what's waiting on you. It reads
+everything from this public GitHub repository, so it updates on its own (within about 5
+minutes of each change) without WOLF running on your computer.
+
+**Wallpaper Engine** (Windows):
+
+1. Download this repository (Code, then Download ZIP) and unzip it somewhere permanent.
+2. In Wallpaper Engine, click **Open Wallpaper** (bottom left), then **Open from File**, and
+   pick `wallpaper\index.html`. Alternatively, copy the `wallpaper` folder into
+   `Steam\steamapps\common\wallpaper_engine\projects\myprojects\` and it appears in your
+   installed wallpapers.
+3. In the wallpaper's settings you can change the repository, branch, how often it checks
+   for changes, the finished-part color, and hide the side panel.
+
+**Any browser:** open `wallpaper/index.html` directly; it works the same.
+
 ## Components: WOLF's abilities
 
 Everything WOLF can do beyond talking is a component you can switch on or off:
