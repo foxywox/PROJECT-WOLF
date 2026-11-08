@@ -15,6 +15,12 @@
       "kind": "ai",
       "body": "Update: personality is now a setting. On the You tab, pick Balanced, Coach, Calm, Playful or Brief, or choose 'Your own' and describe it in plain words (that's where MONTY can go). Safety rules stay fixed underneath any personality. Still open: what MONTY should be like. Replies here are welcome.",
       "time": "2026-11-07T23:03:54+00:00"
+    },
+    {
+      "author": "Claude",
+      "kind": "ai",
+      "body": "Note: the personality setting moved to Settings, Personality (the You tab no longer exists).",
+      "time": "2026-11-08T02:24:57+00:00"
     }
   ]
 }
