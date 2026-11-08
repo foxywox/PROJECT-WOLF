@@ -1,20 +1,24 @@
 {
-  "title": "WOLF Ember Forest",
-  "description": "An autumn forest at golden hour. WOLF, a wolf made of glowing facets, comes to life piece by piece as its production plan gets done. Includes a day, date and time clock. Reads the public PROJECT-WOLF repository on GitHub.",
+  "title": "WOLF Den",
+  "description": "WOLF rests on a glowing rune circle in a golden-hour autumn forest, its helper agents around it, framed by live panels: what's being built, memory and learning, system resources, agents, what needs you, and an activity timeline. Every number is real: build progress comes from the public PROJECT-WOLF repository, and your own WOLF's memories and system stats come from WOLF running on this PC.",
   "type": "web",
   "file": "index.html",
   "preview": "preview.jpg",
-  "tags": ["Nature", "Animal"],
+  "tags": ["Nature", "Animal", "Technology"],
   "general": {
     "properties": {
-      "showclock": { "order": 0, "text": "Show the clock", "type": "bool", "value": true },
-      "hour24": { "order": 1, "text": "24-hour time", "type": "bool", "value": true },
-      "showstatus": { "order": 2, "text": "Show WOLF's status under the clock", "type": "bool", "value": true },
-      "textcolor": { "order": 3, "text": "Text color", "type": "color", "value": "0.941 0.4 0.243" },
-      "particles": { "order": 4, "text": "Embers and leaves (%)", "type": "slider", "min": 0, "max": 200, "step": 10, "value": 100 },
-      "refreshminutes": { "order": 5, "text": "Check for WOLF changes every (minutes)", "type": "slider", "min": 1, "max": 30, "step": 1, "value": 2 },
-      "repo": { "order": 6, "text": "GitHub repository (owner/name)", "type": "textinput", "value": "foxywox/PROJECT-WOLF" },
-      "branch": { "order": 7, "text": "Branch (leave empty for the default)", "type": "textinput", "value": "" }
+      "wolfkey": { "order": 0, "text": "WOLF key (shown when you start WOLF; connects your memories and system stats)", "type": "textinput", "value": "" },
+      "wolfurl": { "order": 1, "text": "WOLF address", "type": "textinput", "value": "http://localhost:8765" },
+      "showpanels": { "order": 2, "text": "Show the panels", "type": "bool", "value": true },
+      "showclock": { "order": 3, "text": "Show the clock", "type": "bool", "value": true },
+      "hour24": { "order": 4, "text": "24-hour time", "type": "bool", "value": true },
+      "showmotto": { "order": 5, "text": "Show the motto", "type": "bool", "value": true },
+      "motto": { "order": 6, "text": "Motto", "type": "textinput", "value": "Dream. Create. Explore. Together." },
+      "textcolor": { "order": 7, "text": "Clock color", "type": "color", "value": "1 0.914 0.812" },
+      "particles": { "order": 8, "text": "Embers and leaves (%)", "type": "slider", "min": 0, "max": 200, "step": 10, "value": 100 },
+      "refreshminutes": { "order": 9, "text": "Check GitHub for WOLF changes every (minutes)", "type": "slider", "min": 1, "max": 30, "step": 1, "value": 2 },
+      "repo": { "order": 10, "text": "GitHub repository (owner/name)", "type": "textinput", "value": "foxywox/PROJECT-WOLF" },
+      "branch": { "order": 11, "text": "Branch (leave empty for the default)", "type": "textinput", "value": "" }
     }
   }
 }

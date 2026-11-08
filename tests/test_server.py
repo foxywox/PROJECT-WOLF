@@ -199,3 +199,19 @@ def test_sigterm_shuts_down_gracefully(tmp_path):
         proc.kill()
     assert proc.returncode == 0
     assert "Saving open conversations" in rest
+
+
+def test_wallpaper_feed_needs_the_key_and_allows_any_origin(server):
+    server.store.add("Loves sci-fi", ["interests"])
+    with pytest.raises(urllib.error.HTTPError) as e:
+        urllib.request.urlopen(server.base + "/api/wallpaper?key=wrong", timeout=10)
+    assert e.value.code == 401 and e.value.headers["Access-Control-Allow-Origin"] == "*"
+    with urllib.request.urlopen(server.base + f"/api/wallpaper?key={server.token}", timeout=10) as r:
+        assert r.headers["Access-Control-Allow-Origin"] == "*"
+        data = json.loads(r.read())
+    assert data["memories"] == 1 and data["latest_memory"]["text"] == "Loves sci-fi"
+    assert {a["name"] for a in data["abilities"]} >= {"memory", "reminders"}
+    assert data["system"] is None or set(data["system"]) == {"cpu", "ram", "disk"}
+    # every other API route still refuses requests without the Authorization header
+    with pytest.raises(urllib.error.HTTPError):
+        urllib.request.urlopen(server.base + f"/api/memory?key={server.token}", timeout=10)

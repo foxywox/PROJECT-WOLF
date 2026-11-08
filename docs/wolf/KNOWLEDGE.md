@@ -87,18 +87,19 @@ memory, and you can talk to it in a web app (`wolf serve`, phone + desktop, voic
   pup scene was removed as redundant with the separate progress window), the plan and the
   forum; polls `/api/hub` every 20 s while open. Header tabs on desktop, fixed bottom bar
   under 640px (`--tabbar`).
-- `wallpaper/` (owner's desktop wallpaper; Wallpaper Engine `project.json` type "web"):
-  "Ember Forest", styled after the owner's own autumn wallpaper (warm golden-hour forest,
-  thin spaced day/date/time clock in orange). One canvas: a backdrop (sky glow, blurred
-  trees and canopy, light shafts, trunks, leaf clusters, rock, rippled water reflection,
-  vignette) rendered once per resize/data change; per frame only embers, leaves and the
-  pulsing "active" facets are drawn (30 fps, stops on `setPaused`). The wolf is a sitting
-  silhouette (`OUTLINE` + `INNER` points, Delaunay-triangulated, facets sorted ears-down);
-  facet t maps to plan item floor(t*items/facets): done = fur color, active = pulse,
-  otherwise dark with a faint ember edge. Data: `raw.githubusercontent.com/<repo>/<branch>/
-  hub/plan.json` and `progress.json` (CDN cache ~5 min), cached in localStorage. Properties:
-  showclock, hour24, showstatus, textcolor, particles, refreshminutes, repo, branch. Install
-  steps in the README are from memory (docs.wallpaperengine.io unreachable from the sandbox).
+- `wallpaper/` ("WOLF Den"; Wallpaper Engine `project.json` type "web"): the owner's two
+  references fused: their autumn forest wallpaper (scene, thin clock) and a HUD mockup (WOLF
+  on a rune circle, fox agents, panels). Rule: every panel shows real data or says where its
+  data comes from. GitHub (raw plan.json/progress.json/pyproject version + commits API,
+  `Progress:` commits hidden) drives WOLF's facets, Current Activity, the ring, Needs You and
+  "Built:" timeline items. Local WOLF via `GET /api/wallpaper?key=<web token>` (server: the
+  only route that takes the key in the query and sends `Access-Control-Allow-Origin: *`,
+  because a file:// wallpaper can't send headers) drives Online, memories, latest memory,
+  journal/reminders in the timeline, abilities (= fox agents) and CPU/RAM/disk via psutil
+  (GPU deliberately not shown). Polls local every 15 s, GitHub every 2 min. Canvas backdrop is
+  rendered once per change; soft layers are painted at 1/6 size and upscaled, and the water
+  reflection copies from a snapshot canvas: per-shape `ctx.filter` blur plus self-drawImage
+  once blocked startup for 16-30 s without a GPU.
 - `claude/` + `wolf_assistant/workspace.py`: Claude's workspace. `brief()` assembles protocol,
   HANDOFF, last 3 changelog days, knowledge base, tools, git state, components, repo map
   (`--tests` adds test results). `add_log()` keeps CHANGELOG.md newest-day-first. Tools are

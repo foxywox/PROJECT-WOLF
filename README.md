@@ -106,14 +106,18 @@ or similar secrets. Delete or edit any file at any time. To reset WOLF completel
 
 ## WOLF as your desktop wallpaper
 
-`wallpaper/` is a live wallpaper: an autumn forest at golden hour, with drifting embers and
-falling leaves, a wolf sitting on a rock by the water, and a large day, date and time clock.
-The wolf is made of facets tied to WOLF's production plan: finished items glow in warm fur
-tones, the item being built pulses, and unfinished parts are still a dark silhouette, so you
-watch WOLF come to life as it's built. A line under the clock shows how far along WOLF is
-and how many things are waiting on you. It reads everything from this public GitHub
-repository, so it updates on its own (within about 5 minutes of each change) without WOLF
-running on your computer. The scene is drawn in code, so it's sharp at any resolution.
+`wallpaper/` ("WOLF Den") is a live wallpaper: WOLF rests on a glowing rune circle in a
+golden-hour autumn forest, with its helper agents (WOLF's abilities) around it as small foxes,
+framed by panels. WOLF's body is made of facets tied to the production plan: finished items
+light up, the item being built pulses, and the rest is still a silhouette, so you watch WOLF
+come together as it's built. Every number on it is real:
+
+- **From GitHub** (always, no setup): how much of WOLF is built, what's being built right now,
+  recent changes, and plan items waiting on you. Updates within about 5 minutes of a change.
+- **From WOLF on your PC** (when `wolf serve` or the launcher is running): Online status, your
+  memory count and the latest thing WOLF remembered, conversations and reminders in the
+  timeline, which abilities are on, and CPU / RAM / storage. When WOLF isn't running, it
+  sleeps and those panels say so.
 
 **Wallpaper Engine** (Windows):
 
@@ -122,8 +126,10 @@ running on your computer. The scene is drawn in code, so it's sharp at any resol
    pick `wallpaper\index.html`. Alternatively, copy the `wallpaper` folder into
    `Steam\steamapps\common\wallpaper_engine\projects\myprojects\` and it appears in your
    installed wallpapers.
-3. In the wallpaper's settings you can turn the clock or WOLF's status line off, switch
-   to 12-hour time, change the text color, and dial the embers and leaves up or down.
+3. To connect your own WOLF: start WOLF (the launcher or `wolf serve`). It prints a line
+   starting "Desktop wallpaper:" with your WOLF key. Paste that key into the wallpaper's
+   **WOLF key** setting.
+4. Other settings: panels, clock, 12/24-hour time, the motto, clock color, embers and leaves.
 
 **Any browser:** open `wallpaper/index.html` directly; it works the same.
 

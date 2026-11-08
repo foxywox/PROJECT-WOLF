@@ -142,6 +142,41 @@ class WolfApp:
         save_config(config, self.store.home)
         return self.components()
 
+    def wallpaper_summary(self) -> dict[str, Any]:
+        """What the desktop wallpaper shows about the owner's own WOLF (read-only)."""
+        from . import __version__
+
+        home = self.store.home
+        mems = self.store.recent(1)
+        journal = []
+        for line in self.store.recent_journal(6):
+            parts = line[2:].split(": ", 1)
+            if len(parts) == 2:
+                journal.append({"time": parts[0].replace(" ", "T"), "text": parts[1]})
+        rem = reminders.load(home)
+        open_rem = sorted((r for r in rem if not r.get("done")), key=lambda r: r["due"])
+        system = None
+        try:
+            import psutil
+
+            disk_root = str(Path(home).anchor or "/")
+            system = {"cpu": psutil.cpu_percent(interval=None), "ram": psutil.virtual_memory().percent,
+                      "disk": psutil.disk_usage(disk_root).percent}
+        except Exception:
+            pass
+        return {
+            "version": __version__,
+            "memories": len(self.store.all()),
+            "latest_memory": {"text": mems[0].text, "time": mems[0].updated} if mems else None,
+            "journal": journal,
+            "reminders_due": len(reminders.due(home)),
+            "next_reminder": open_rem[0] if open_rem else None,
+            "abilities": self.components()["components"],
+            "personality": personality.current(home),
+            "conversations_open": len(self.conversations),
+            "system": system,
+        }
+
     def calendar_overview(self) -> dict[str, Any]:
         home = self.store.home
         out: dict[str, Any] = {"calendars": calendar.public_list(home), "events": [], "how_to": calendar.HOW_TO}
@@ -227,6 +262,8 @@ def make_handler(app: WolfApp, token: str):
             url = urlparse(self.path)
             if url.path in STATIC:
                 return self._static(STATIC[url.path])
+            if url.path == "/api/wallpaper":
+                return self._wallpaper(url)
             if not url.path.startswith("/api/") or not self._authed():
                 return None if url.path.startswith("/api/") else self._json(404, {"error": "Not found"})
             if url.path == "/api/memory":
@@ -326,6 +363,23 @@ def make_handler(app: WolfApp, token: str):
                 return self._hub_call(lambda: hub.reply(
                     url.path.rsplit("/", 1)[-1], str(body.get("body", "")), str(body.get("author", "")), "human"))
             return self._json(404, {"error": "Not found"})
+
+        def _wallpaper(self, url):
+            """Read-only summary for the desktop wallpaper. It runs from a local file, so it can't
+            send headers: the key comes in the query string, and the reply allows any origin."""
+            key = parse_qs(url.query).get("key", [""])[0]
+            if not hmac.compare_digest(key.encode(), token.encode()):
+                body, status = {"error": "Wrong WOLF key"}, 401
+            else:
+                body, status = app.wallpaper_summary(), 200
+            data = json.dumps(body).encode()
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(data)
 
         def _hub_call(self, fn):
             try:
@@ -446,6 +500,7 @@ def serve(store: MemoryStore, host: str = "127.0.0.1", port: int = 8765,
             print(f"  your phone:     {scheme}://{ip}:{port}/?token={token}   (same Wi-Fi)")
     else:
         print(f"  {scheme}://{shown_host}:{port}/?token={token}")
+    print(f"\nDesktop wallpaper: paste this into its 'WOLF key' setting to show your memories and system:\n  {token}")
     print("\nPress Ctrl+C to stop. Open conversations are saved to memory when you stop.")
     if open_browser:
         import webbrowser
