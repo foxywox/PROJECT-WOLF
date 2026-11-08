@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-11-07, after the personality/calendar/reminders build. Rewrite this file at the end of
+Last updated: 2026-11-08, after reorganizing the app. Rewrite this file at the end of
 every session; keep it under about two pages.
 
 ## Where things stand
@@ -13,13 +13,16 @@ code and tests:
   conversation.
 - **It's modular:** every ability is a component (`wolf/components/`). The built-ins are
   memory, web_search and clock. Add one by dropping a file in `~/.wolf/components/`.
-- **Project hub:** WOLF's app has a Project tab with the build tracker (wolf pup), the whole
-  production plan (`hub/plan.json`) and a research forum (`hub/forum/`) where people and AI
-  post. AI side: `wolf-dev plan`, `wolf-dev forum`, and the `research` component.
+- **App layout:** four tabs, Chat, Schedule, Memory and Settings, chosen with the owner after
+  they found the earlier layout confusing. Keep new features inside these four; don't add
+  tabs without asking.
+- **Project hub:** a project page (opened from Settings, not a tab) shows build progress as a
+  plain bar, the whole production plan (`hub/plan.json`) and a research forum (`hub/forum/`)
+  where people and AI post. AI side: `wolf-dev plan`, `wolf-dev forum`, and the `research` component.
 - **Personal features:** personality setting (presets or the owner's own words), reminders
   (due banner in chat), read-only calendar from any service's private iCal link.
 - **Friendlier app:** bottom tab bar on phones, suggested first messages, ability switches,
-  a "How WOLF works" guide, retry on failures.
+  a "How WOLF works" guide (Settings, Help), retry on failures.
 - **Easy to start:** `start-wolf.command` / `start-wolf.bat` plus `wolf setup` (saves the API key).
 - **Ready to host:** a Dockerfile, verified in a container. The owner hasn't picked a host yet.
 - **Quality:** 79 offline tests; `python3 claude/tools/check.py` runs everything.
@@ -69,6 +72,9 @@ to AI. As of now:
 
 ## How the owner likes to work
 
+- Judges the app by whether it makes sense at a glance. They called the old layout
+  confusing; when a request is ambiguous ("night controls"), one quick multiple-choice
+  question worked well.
 - Wants things automated with minimal effort on their side: do the work, then report.
 - Wants progress visible: a live progress window with an animated wolf pup exists (see
   `claude/TOOLS.md`). Update it at real milestones.

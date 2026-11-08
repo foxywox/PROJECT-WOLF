@@ -77,10 +77,16 @@ memory, and you can talk to it in a web app (`wolf serve`, phone + desktop, voic
   Tests patch `calendar.urlopen` (never the global `urllib.request.urlopen`, which the test
   client also uses).
 - Memory reflection is skipped for trivial chats (one user message under 40 chars).
-- `wolf/web/`: tabs Chat / Memory / You / Project; header tabs on desktop, fixed bottom bar
-  under 640px (`--tabbar`). Chat welcome has suggestion buttons; failed messages get "Try
-  again". You tab: "How WOLF works", profile, ability switches, journal with Today/Yesterday.
-  Project tab polls `/api/hub` every 20 s while visible.
+- `wolf/web/`: tabs Chat / Schedule / Memory / Settings (owner found the old Chat / Memory /
+  You / Project layout confusing, 2026-11-08). `showView(name)` switches views and runs a
+  loader (`loadSchedule`, `loadMemoryTab`, `loadSettings`, `loadProject`). Schedule =
+  reminders (add form behind "+ Add a reminder") + next 7 calendar days. Memory = profile,
+  memories, past conversations. Settings = personality, abilities, calendar connection, help,
+  link to the project page. The project page (`view-project`) is not a tab: opened from
+  Settings, Settings stays highlighted; shows build progress as a plain bar (the night-sky
+  pup scene was removed as redundant with the separate progress window), the plan and the
+  forum; polls `/api/hub` every 20 s while open. Header tabs on desktop, fixed bottom bar
+  under 640px (`--tabbar`).
 - `claude/` + `wolf_assistant/workspace.py`: Claude's workspace. `brief()` assembles protocol,
   HANDOFF, last 3 changelog days, knowledge base, tools, git state, components, repo map
   (`--tests` adds test results). `add_log()` keeps CHANGELOG.md newest-day-first. Tools are
@@ -127,7 +133,8 @@ memory, and you can talk to it in a web app (`wolf serve`, phone + desktop, voic
   `python3 claude/tools/ui_smoke.py OUTDIR` and look at the screenshots (it uses a throwaway
   copy of the hub).
 - In `.panel`, centering comes from `margin-left/right: auto`; set vertical margins with
-  longhands on headings and hints, or they snap to the left edge on desktop.
+  longhands on headings, hints and lists (`margin: 0` on a list once left-aligned every list
+  on desktop), or they snap to the left edge.
 - A grid item with `position: fixed` still obeys `justify-self`; the phone tab bar needs
   `justify-self: stretch` (a centered bar was caught in screenshots).
 - End of session: changelog entry + rewrite `claude/HANDOFF.md`.
@@ -140,6 +147,9 @@ memory, and you can talk to it in a web app (`wolf serve`, phone + desktop, voic
 - Default model `claude-opus-5-5`, effort `medium` for chat.
 - 2026-11-07: Every WOLF ability is a swappable component (owner asked for components
   "completely interchangeable with WOLF").
+- 2026-11-08: App reorganized into Chat / Schedule / Memory / Settings; the project plan and
+  forum moved off the main tabs to a page opened from Settings; the night-sky tracker removed
+  from the app (the owner left the choice of what to remove to Claude).
 - 2026-11-07: Personality is a setting (presets or the owner's own words); reminders on by
   default; calendar via private iCal links so no provider has to be chosen (built while the
   owner was away).

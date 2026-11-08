@@ -21,12 +21,12 @@
   <nav class="tabs" role="tablist" aria-label="Sections">
     <button role="tab" data-view="chat" aria-selected="true">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg><span>Chat</span></button>
+    <button role="tab" data-view="schedule" aria-selected="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><span>Schedule</span></button>
     <button role="tab" data-view="memory" aria-selected="false">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4a6 6 0 0 0-6 6c0 2.2 1.2 3.6 2 4.6V18h8v-3.4c.8-1 2-2.4 2-4.6a6 6 0 0 0-6-6zM10 21h4"/></svg><span>Memory</span></button>
-    <button role="tab" data-view="you" aria-selected="false">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4.5-6 8-6s7 2 8 6"/></svg><span>You</span></button>
-    <button role="tab" data-view="project" aria-selected="false">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Project</span></button>
+    <button role="tab" data-view="settings" aria-selected="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg><span>Settings</span></button>
   </nav>
 
   <button id="speak-toggle" class="icon-btn speak" aria-pressed="false" title="Read replies aloud" aria-label="Read replies aloud">
@@ -67,44 +67,15 @@
       </div>
     </section>
 
-    <!-- Memory -->
-    <section id="view-memory" class="view" aria-label="Memory">
+    <!-- Schedule: reminders + calendar -->
+    <section id="view-schedule" class="view" aria-label="Schedule">
       <div class="panel">
-        <div class="panel-head">
-          <h2>What WOLF remembers</h2>
-          <span id="mem-count" class="muted"></span>
-        </div>
-        <p class="hint">WOLF saves these on its own as you talk. Remove anything you'd rather it forget.</p>
-        <input id="mem-search" type="search" placeholder="Search memories" aria-label="Search memories">
-        <ul id="mem-list" class="mem-list"></ul>
-      </div>
-    </section>
-
-    <!-- You -->
-    <section id="view-you" class="view" aria-label="You">
-      <div class="panel">
-        <details class="card help" id="help">
-          <summary>How WOLF works</summary>
-          <ul>
-            <li><b>It learns as you talk.</b> When you mention something worth keeping (a goal, a preference, someone in your life), WOLF saves it. You'll see a small "Saved to memory" tag.</li>
-            <li><b>You're in control.</b> Everything it knows is on the Memory tab, and you can delete any of it.</li>
-            <li><b>It stays with you.</b> Your memories are files on your own computer, not in the project.</li>
-            <li><b>It won't keep secrets.</b> WOLF never saves passwords, card numbers or similar.</li>
-            <li><b>Starting fresh saves your progress.</b> "Start a new conversation" (or 20 quiet minutes) wraps up the chat and writes a line in your journal below.</li>
-          </ul>
-        </details>
-
-        <h2>WOLF's picture of you</h2>
-        <div id="profile" class="md card"></div>
-
-        <h2>Personality</h2>
-        <p class="hint">How WOLF talks to you. Changes apply from your next conversation.</p>
-        <form id="personality" class="card choices"></form>
-
         <h2>Reminders</h2>
-        <p class="hint">Ask WOLF "remind me to…", or add one here. Due reminders show at the top of the chat.</p>
+        <p class="hint">Tell WOLF "remind me to…" in the chat, or add one here.</p>
         <div class="card">
           <ul id="reminders" class="reminders"></ul>
+          <details class="add-reminder" id="add-reminder">
+            <summary>+ Add a reminder</summary>
           <form id="reminder-form" class="form inline-form">
             <label for="rm-text">Remind me to</label>
             <input id="rm-text" maxlength="300" required placeholder="Call the dentist">
@@ -112,13 +83,51 @@
             <input id="rm-due" type="datetime-local" required>
             <div class="form-actions"><button class="pill-btn primary" type="submit">Add reminder</button></div>
           </form>
+          </details>
         </div>
 
+        <h2>Next 7 days</h2>
+        <div class="card">
+          <div id="cal-events"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Memory: everything WOLF knows about you -->
+    <section id="view-memory" class="view" aria-label="Memory">
+      <div class="panel">
+        <h2>About you</h2>
+        <p class="hint">WOLF's short summary of what matters to you. It keeps this up to date as you talk.</p>
+        <div id="profile" class="md card"></div>
+
+        <div class="panel-head">
+          <h2>Things WOLF remembers</h2>
+          <span id="mem-count" class="muted"></span>
+        </div>
+        <p class="hint">Saved on their own as you talk. Remove anything you'd rather WOLF forget.</p>
+        <input id="mem-search" type="search" placeholder="Search memories" aria-label="Search memories">
+        <ul id="mem-list" class="mem-list"></ul>
+
+        <h2>Past conversations</h2>
+        <ul id="journal" class="journal"></ul>
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section id="view-settings" class="view" aria-label="Settings">
+      <div class="panel">
+        <h2>Personality</h2>
+        <p class="hint">How WOLF talks to you. Applies from your next conversation.</p>
+        <form id="personality" class="card choices"></form>
+
+        <h2>What WOLF can do</h2>
+        <p class="hint">Turn abilities on or off. Applies from your next conversation.</p>
+        <ul id="abilities" class="abilities card"></ul>
+
         <h2>Calendar</h2>
-        <p class="hint">Let WOLF see your schedule (it can't change anything). Works with Google, Outlook and Apple.</p>
+        <p class="hint">Let WOLF see your schedule. It can't change anything. Works with Google, Outlook and Apple.</p>
         <div class="card">
           <ul id="calendars" class="calendars"></ul>
-          <div id="cal-events"></div>
           <details class="how">
             <summary>Where do I find my calendar link?</summary>
             <p id="cal-howto" class="hint"></p>
@@ -133,63 +142,40 @@
           </form>
         </div>
 
-        <h2>What WOLF can do</h2>
-        <p class="hint">Turn abilities on or off. Changes apply from your next conversation.</p>
-        <ul id="abilities" class="abilities card"></ul>
+        <h2>Help</h2>
+        <details class="card help" id="help">
+          <summary>How WOLF works</summary>
+          <ul>
+            <li><b>It learns as you talk.</b> When you mention something worth keeping (a goal, a preference, someone in your life), WOLF saves it. You'll see a small "Saved to memory" tag.</li>
+            <li><b>You're in control.</b> Everything it knows is on the Memory tab, and you can delete any of it.</li>
+            <li><b>It stays with you.</b> Your memories are files on your own computer, not in the project.</li>
+            <li><b>It won't keep secrets.</b> WOLF never saves passwords, card numbers or similar.</li>
+            <li><b>Starting fresh saves your progress.</b> "Start a new conversation" (or 20 quiet minutes) wraps up the chat and writes a line in your journal below.</li>
+          </ul>
+        </details>
 
-        <h2>Recent conversations</h2>
-        <ul id="journal" class="journal"></ul>
+        <h2>The WOLF project</h2>
+        <div class="card project-link">
+          <p>See how WOLF itself is being built: the plan, current progress, and the research forum.</p>
+          <button class="pill-btn" type="button" id="open-project">Open the project page</button>
+        </div>
       </div>
     </section>
 
-    <!-- Project -->
-    <section id="view-project" class="view" aria-label="Project">
+    <!-- Project page (opened from Settings, not a main tab) -->
+    <section id="view-project" class="view" aria-label="The WOLF project">
       <div class="panel">
+        <button class="text-btn back" type="button" id="close-project">‹ Back to Settings</button>
+        <h2 class="page-title">How WOLF is being built</h2>
         <div id="hub-missing" class="card" hidden>
-          <h2>Project hub not found</h2>
-          <p class="hint">The production plan and forum live in the WOLF project folder. Start WOLF from that folder (the launcher does this) to see them here.</p>
+          <p class="hint">The plan and forum live in the WOLF project folder. Start WOLF from that folder (the launcher does this) to see them here.</p>
         </div>
-
         <div id="hub">
-          <!-- Build tracker -->
-          <section class="card tracker" aria-labelledby="tracker-title">
-            <div class="tracker-head">
-              <div><div class="eyebrow">Current build</div><h2 id="tracker-title">Waiting for the first update</h2></div>
-              <span class="pct" id="tracker-pct">0%</span>
-            </div>
-            <div class="scene" id="scene" aria-hidden="true">
-              <div class="moon" id="moon"></div>
-              <div class="star" style="left:18%;top:22%"></div><div class="star" style="left:34%;top:12%"></div>
-              <div class="star" style="left:52%;top:28%"></div><div class="star" style="left:68%;top:14%"></div>
-              <div class="ground"></div>
-              <div class="trail" id="trail"></div>
-              <div class="flag"><b></b><i></i></div>
-              <div class="bubble" id="bubble" hidden>awoo!</div>
-              <div class="pup" id="pup">
-                <svg viewBox="0 0 76 60">
-                  <g class="body-g">
-                    <path class="tail" d="M14 30 Q4 22 6 12 Q12 22 18 26 Z" fill="var(--fur-dark)"/>
-                    <rect class="leg b" x="20" y="34" width="6" height="16" rx="3" fill="var(--fur-dark)"/>
-                    <rect class="leg b" x="44" y="34" width="6" height="16" rx="3" fill="var(--fur-dark)"/>
-                    <ellipse cx="34" cy="31" rx="21" ry="12" fill="var(--fur)"/>
-                    <ellipse cx="38" cy="36" rx="12" ry="6" fill="var(--belly)"/>
-                    <rect class="leg a" x="26" y="35" width="6" height="16" rx="3" fill="var(--fur)"/>
-                    <rect class="leg a" x="49" y="35" width="6" height="16" rx="3" fill="var(--fur)"/>
-                    <g class="head-g">
-                      <polygon points="50,12 54,0 59,11" fill="var(--fur-dark)"/>
-                      <polygon points="60,11 66,1 68,14" fill="var(--fur-dark)"/>
-                      <circle cx="59" cy="20" r="11" fill="var(--fur)"/>
-                      <ellipse cx="68" cy="24" rx="7" ry="5" fill="var(--belly)"/>
-                      <circle cx="74" cy="22" r="2.2" fill="var(--pup-ink)"/>
-                      <ellipse class="eye" cx="61" cy="17" rx="1.8" ry="2.2" fill="var(--pup-ink)"/>
-                    </g>
-                  </g>
-                </svg>
-              </div>
-            </div>
-            <p class="tracker-now" id="tracker-now"></p>
-            <ol class="steps" id="tracker-steps"></ol>
-            <p class="muted small" id="tracker-updated"></p>
+          <section class="card build" aria-labelledby="build-title">
+            <div class="panel-head"><div><div class="eyebrow">Current work</div><h3 id="build-title">Nothing in progress</h3></div>
+              <span class="pct" id="build-pct"></span></div>
+            <div class="meter" aria-hidden="true"><i id="build-meter"></i></div>
+            <p class="hint" id="build-now"></p>
           </section>
 
           <!-- Plan -->

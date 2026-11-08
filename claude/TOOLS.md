@@ -2,11 +2,12 @@ Tools and services used outside the repo. Scripts inside the repo are in `claude
 
 - **Build progress**: `python3 claude/tools/progress.py PERCENT ACTIVE_STEP "now" ["note"]`
   (`--steps "a|b|c" --title T` starts a new build) writes `hub/progress.json`, which WOLF's
-  Project tab shows with the wolf pup. Commit it with your work. Percent 100 makes the pup sit
-  and howl; no update for 20 minutes makes it nap.
+  project page (Settings, then "Open the project page") shows as a plain progress bar.
+  Commit it with your work.
 - **Live progress window** (artifact "WOLF Build Tracker", owned by the WOLF owner; URL in the
-  owner's Claude artifact list): mirrors the same JSON while you work, for the owner to watch
-  without running WOLF. Write `hub/progress.json` with the `ArtifactData` tool: `action: set`,
+  owner's Claude artifact list): the animated wolf-pup view of the same JSON, for the owner
+  to watch while you work. Percent 100 makes the pup howl; 20 minutes without an update
+  makes it nap. Write `hub/progress.json` with the `ArtifactData` tool: `action: set`,
   `collection: progress`, `doc_id: build`, plus `if_version` from the previous write.
 - **Claude API**: WOLF uses `claude-opus-5-5` through the `anthropic` Python SDK. The API is
   reachable from the cloud sandbox, but there is no API key there, so live calls can't be tested

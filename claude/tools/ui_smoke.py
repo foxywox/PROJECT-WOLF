@@ -3,8 +3,8 @@
 Usage: python3 claude/tools/ui_smoke.py [OUTPUT_DIR]
 Needs Node.js with Playwright (pre-installed in Claude Code's cloud sandbox). It starts
 `wolf serve` on a temporary memory folder with sample data, sends one chat message, opens
-every tab (including the Project tab, where it posts a test thread to a throwaway copy of
-the hub), then prints any page errors. Look at the PNGs it writes before shipping UI changes.
+every tab (Chat, Schedule, Memory, Settings) and the project page (where it posts a test
+thread to a throwaway copy of the hub), then prints any page errors. Look at the PNGs it writes before shipping UI changes.
 """
 
 from __future__ import annotations
@@ -42,22 +42,23 @@ const { chromium, devices } = require('playwright');
     p.on("console", m => { if (m.type() === "error") errors.push(name + " console: " + m.text()); });
     await p.goto(base + "/?token=TOKEN");
     await p.fill("#input", "I'm training for a half marathon in March"); await p.click("#send");
-    await p.waitForSelector(".msg.wolf .chip"); await p.screenshot({ path: `${dir}/${name}-chat.png` });
-    await p.click('[data-view="memory"]'); await p.waitForSelector(".mem-list li");
+    await p.waitForSelector(".msg.wolf .chip"); await p.waitForSelector("#due-banner .row");
+    await p.screenshot({ path: `${dir}/${name}-chat.png` });
+    await p.click('[data-view="schedule"]'); await p.waitForSelector("#cal-events .event");
+    await p.screenshot({ path: `${dir}/${name}-schedule.png` });
+    await p.click("#add-reminder summary"); await p.fill("#rm-text", "Smoke test reminder"); await p.click("#reminder-form [type=submit]");
+    await p.waitForSelector("#reminders li >> text=Smoke test reminder");
+    await p.click('[data-view="memory"]'); await p.waitForSelector(".mem-list li .forget"); await p.waitForSelector("#journal li");
     await p.screenshot({ path: `${dir}/${name}-memory.png` });
-    await p.click('[data-view="you"]'); await p.waitForSelector("#abilities .switch");
-    await p.waitForSelector("#personality .choice");
-    await p.screenshot({ path: `${dir}/${name}-you.png` });
-    await p.screenshot({ path: `${dir}/${name}-you-full.png`, fullPage: true });
-    await p.click('[data-view="chat"]'); await p.waitForSelector("#due-banner .row");
-    await p.screenshot({ path: `${dir}/${name}-due.png` });
-    await p.click('[data-view="project"]'); await p.waitForSelector("#plan details");
-    await p.screenshot({ path: `${dir}/${name}-project.png`, fullPage: false });
+    await p.click('[data-view="settings"]'); await p.waitForSelector("#personality .choice"); await p.waitForSelector("#abilities .switch");
+    await p.screenshot({ path: `${dir}/${name}-settings.png` });
+    await p.click("#open-project"); await p.waitForSelector("#plan details");
+    await p.screenshot({ path: `${dir}/${name}-project.png` });
     await p.click("#new-thread-btn");
     await p.fill("#tf-title", "Smoke test thread"); await p.fill("#tf-body", "Posted by the UI smoke test.");
     await p.fill("#tf-author", "Tester"); await p.click('#thread-form [type=submit]');
     await p.waitForSelector("#posts li");
-    await p.screenshot({ path: `${dir}/${name}-thread.png` });
+    await p.click("#close-project"); await p.waitForSelector("#view-settings.active");
     await ctx.close();
   }
   console.log(JSON.stringify({ errors })); await b.close();

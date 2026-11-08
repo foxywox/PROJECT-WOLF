@@ -1,6 +1,6 @@
 {
   "title": "WOLF production plan",
-  "updated": "2026-11-07",
+  "updated": "2026-11-08",
   "about": "Everything WOLF is and will be, in order. Status: done, active, next, later, idea. 'who' says whether the owner (human), Claude (claude), or either is needed.",
   "phases": [
     {
@@ -100,6 +100,13 @@
           "title": "Friendlier app: tab bar, suggestions, ability switches, help",
           "status": "done",
           "who": "claude"
+        },
+        {
+          "id": "clear-layout",
+          "title": "Clearer layout: Chat, Schedule, Memory, Settings",
+          "status": "done",
+          "who": "claude",
+          "note": "Owner found the old tabs confusing; project plan and forum moved off the main tabs."
         }
       ]
     },

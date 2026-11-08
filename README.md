@@ -29,28 +29,23 @@ wolf                    # or talk right in the terminal; type 'bye' when you're 
 
 ## The WOLF app (phone, desktop, voice)
 
-`wolf serve` starts WOLF as a web app and prints a private link. Open it, and you get:
+`wolf serve` starts WOLF as a web app and prints a private link. It has four tabs:
 
-- **Chat** with replies that stream in as WOLF writes them. A small tag shows when WOLF
-  saved or checked something in its memory.
-- **Voice**: tap the mic and talk. Turn on the speaker icon and WOLF reads its replies
-  aloud. If you started with the mic, it listens again after answering, so you can go
-  back and forth hands-free.
-- **Memory**: see and search everything WOLF remembers, and delete anything with one tap.
-- **You**: WOLF's profile of you, its **personality** (Balanced, Coach, Calm, Playful, Brief,
-  or your own words), your **reminders**, your **calendar**, switches for its abilities, a
-  plain-language "How WOLF works" guide, and a log of past conversations.
-- **Reminders**: say "remind me to…" and WOLF sets one. Due reminders show at the top of the
-  chat with a Done button, and WOLF brings them up when you next talk.
-- **Calendar**: connect any calendar (Google, Outlook, Apple) with its private calendar link,
-  and WOLF can see your schedule. It can't change anything.
-- **Project**: how WOLF itself is being built. It shows the current build (a little wolf pup
-  runs toward the flag as work progresses), the whole production plan, and a research forum
-  where people and AI discuss ideas. The project is public, so forum posts are too once
-  they're committed.
-- **New conversation** wraps up the current one: WOLF saves what it learned and writes a
-  journal line. Conversations left idle for 20 minutes, or open when you stop the server,
-  are saved the same way.
+- **Chat**: talk to WOLF by typing or with the mic. Replies stream in as WOLF writes them, a
+  small tag shows when it saved something to memory, and due reminders appear at the top.
+  "Start a new conversation" wraps up the current one: WOLF saves what it learned and writes
+  a journal line (it also does this after 20 quiet minutes, or when you stop the server).
+- **Schedule**: your reminders (tick them off, or add one) and the next 7 days from your
+  calendar. Say "remind me to…" in the chat and it shows up here.
+- **Memory**: everything WOLF knows about you: a short summary, the individual things it
+  remembers (search them, delete any), and past conversations.
+- **Settings**: WOLF's personality (Balanced, Coach, Calm, Playful, Brief, or your own words),
+  its abilities (switch them on or off), connecting a calendar (Google, Outlook or Apple,
+  read-only), help, and a link to the project page: the plan for building WOLF, current
+  progress, and a research forum for people and AI. Forum posts are public once committed.
+
+The speaker icon at the top makes WOLF read its replies aloud. If you started talking with
+the mic, it listens again after answering, so you can go back and forth hands-free.
 
 **On your phone (same Wi-Fi):** run `wolf serve --host 0.0.0.0` and open the "your phone" link
 it prints. To install it like an app, use *Add to Home Screen* (iPhone: Share menu; Android:
@@ -121,7 +116,7 @@ Everything WOLF can do beyond talking is a component you can switch on or off:
 | `reminders` | Sets reminders and brings them up when due |
 | `calendar` | Reads your calendar (turns on when you connect one) |
 
-Switch them on the **You** tab in the app, or with `wolf components` /
+Switch them in **Settings** in the app, or with `wolf components` /
 `wolf components disable web_search` in a terminal. There's also `research` (off by default):
 it lets WOLF read the production plan and post in the research forum when you ask it to.
 

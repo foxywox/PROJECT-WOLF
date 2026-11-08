@@ -71,15 +71,16 @@ function lock() { $("#locked").hidden = false; }
 if (!token()) lock();
 
 /* ---------- tabs ---------- */
-document.querySelectorAll(".tabs button").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b === btn)));
-    document.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${btn.dataset.view}`));
-    if (btn.dataset.view === "memory") loadMemory();
-    if (btn.dataset.view === "you") loadYou();
-    if (btn.dataset.view === "project") loadProject(); else stopProjectRefresh();
-  });
-});
+const LOADERS = { schedule: () => loadSchedule(), memory: () => loadMemoryTab(), settings: () => loadSettings(), project: () => loadProject() };
+function showView(name) {
+  // The project page isn't a tab; Settings stays highlighted while it's open.
+  const tab = name === "project" ? "settings" : name;
+  document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.view === tab)));
+  document.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${name}`));
+  if (name !== "project") stopProjectRefresh();
+  LOADERS[name]?.();
+}
+document.querySelectorAll(".tabs button").forEach((btn) => btn.addEventListener("click", () => showView(btn.dataset.view)));
 
 /* ---------- friendly dates ---------- */
 function dayLabel(date) {
@@ -374,23 +375,21 @@ async function loadMemory() {
 }
 
 /* ---------- you ---------- */
-async function loadYou() {
+async function loadSchedule() {
   try {
-    const [p, j, c, per, rem, cal] = await Promise.all([
-      api("/api/profile").then((r) => r.json()),
-      api("/api/journal").then((r) => r.json()),
-      api("/api/components").then((r) => r.json()),
-      api("/api/personality").then((r) => r.json()),
-      api("/api/reminders").then((r) => r.json()),
-      api("/api/calendar").then((r) => r.json()),
-    ]);
-    renderPersonality(per);
+    const [rem, cal] = await Promise.all([api("/api/reminders").then((r) => r.json()), api("/api/calendar").then((r) => r.json())]);
     renderReminders(rem);
     renderCalendar(cal);
+  } catch (e) { if (e.message !== "locked") toast("Couldn't load your schedule."); }
+}
+
+async function loadMemoryTab() {
+  loadMemory();
+  try {
+    const [p, j] = await Promise.all([api("/api/profile").then((r) => r.json()), api("/api/journal").then((r) => r.json())]);
     $("#profile").innerHTML = p.profile.trim()
       ? md(p.profile.replace(/^# About me\s*/, ""))
       : '<p class="muted">Empty for now. As you talk, WOLF writes a short summary of what matters to you here.</p>';
-    renderAbilities(c.components || []);
     const jl = $("#journal");
     jl.innerHTML = "";
     if (!j.journal.length) jl.innerHTML = '<li class="muted">No conversations yet. Your first one will show up here.</li>';
@@ -402,8 +401,23 @@ async function loadYou() {
       li.append(t, Object.assign(document.createElement("span"), { textContent: m ? m[3] : line.replace(/^- /, "") }));
       jl.appendChild(li);
     }
-  } catch (e) { if (e.message !== "locked") toast("Couldn't load your profile."); }
+  } catch (e) { if (e.message !== "locked") toast("Couldn't load your memory."); }
 }
+
+async function loadSettings() {
+  try {
+    const [c, per, cal] = await Promise.all([
+      api("/api/components").then((r) => r.json()),
+      api("/api/personality").then((r) => r.json()),
+      api("/api/calendar").then((r) => r.json()),
+    ]);
+    renderPersonality(per);
+    renderAbilities(c.components || []);
+    renderCalendar(cal);
+  } catch (e) { if (e.message !== "locked") toast("Couldn't load settings."); }
+}
+$("#open-project").addEventListener("click", () => showView("project"));
+$("#close-project").addEventListener("click", () => showView("settings"));
 
 const ABILITY_NAMES = { memory: "Memory", web_search: "Web search", clock: "Date and time", reminders: "Reminders",
   calendar: "Calendar", research: "Project research" };
@@ -533,6 +547,7 @@ $("#reminder-form").addEventListener("submit", async (e) => {
   const data = await postForm("/api/reminders", { text: $("#rm-text").value, due: $("#rm-due").value }, e.target, false);
   if (!data) return;
   $("#rm-text").value = "";
+  $("#add-reminder").open = false;
   renderReminders(data);
   renderDue(data.due);
   toast("Reminder added");
@@ -557,11 +572,17 @@ function renderCalendar(data) {
     li.append(el("span", null, c.name), el("span", "when", c.source), remove);
     ul.append(li);
   }
+  if (!data.calendars.length) ul.append(el("li", "muted", "No calendar connected yet."));
   const box = $("#cal-events");
   box.innerHTML = "";
-  if (!data.calendars.length) { box.append(el("p", "hint", "No calendar connected yet.")); return; }
+  if (!data.calendars.length) {
+    box.append(el("p", "hint", "Connect your calendar and your events will show up here, so WOLF can help plan around them."));
+    const go = Object.assign(el("button", "pill-btn", "Connect a calendar"), { type: "button" });
+    go.addEventListener("click", () => { showView("settings"); setTimeout(() => $("#cal-name").focus(), 50); });
+    box.append(go);
+    return;
+  }
   if (data.error) { box.append(el("p", "hint", data.error)); return; }
-  box.append(el("div", "eyebrow", "Next 7 days"));
   if (!data.events.length) box.append(el("p", "hint", "Nothing scheduled."));
   for (const ev of data.events.slice(0, 8)) {
     const row = el("div", "event");
@@ -579,7 +600,7 @@ $("#calendar-form").addEventListener("submit", async (e) => {
   if (!data) return;
   e.target.reset();
   renderCalendar(data);
-  loadYou();
+  loadSettings();
   toast(`Connected. WOLF can now see ${data.added_events} events on that calendar.`);
 });
 
@@ -597,40 +618,21 @@ async function loadProject() {
     $("#hub-missing").hidden = data.available;
     $("#hub").hidden = !data.available;
     if (!data.available) return;
-    renderTracker(data.progress);
+    renderBuild(data.progress);
     renderPlan(data.plan);
     if (!openThread) renderThreads(data.threads);
   } catch (e) { if (e.message !== "locked") toast("Couldn't load the project hub."); }
   if (!projectTimer) projectTimer = setInterval(() => { if (!document.hidden) loadProject(); }, 20000);
 }
 
-function renderTracker(d) {
-  const scene = $("#scene");
-  if (!d) { $("#tracker-title").textContent = "No build in progress"; $("#tracker-now").textContent = ""; return; }
+function renderBuild(d) {
+  if (!d) { $("#build-title").textContent = "Nothing in progress"; $("#build-now").textContent = ""; $("#build-pct").textContent = ""; return; }
   const pct = Math.max(0, Math.min(100, Math.round(Number(d.percent) || 0)));
   const done = d.status === "done" || pct >= 100;
-  const asleep = !done && d.updated && Date.now() - d.updated > 20 * 60 * 1000;
-  $("#tracker-title").textContent = d.title || "Current build";
-  $("#tracker-pct").textContent = pct + "%";
-  $("#tracker-now").textContent = done ? "All done. Time to howl." : asleep ? "Paused. The pup is napping until work picks up again." : (d.current || "Working…");
-  const x = 12 + pct * 0.7;
-  $("#pup").style.left = x + "%"; $("#bubble").style.left = x + "%";
-  $("#trail").style.width = `calc(${x}% - 12px)`;
-  scene.classList.toggle("running", !done && !asleep);
-  scene.classList.toggle("done", done);
-  scene.classList.toggle("sleeping", !!asleep);
-  $("#bubble").hidden = !done;
-  $("#moon").style.transform = done ? "scale(1.25)" : "scale(1)";
-  scene.querySelectorAll(".zzz").forEach((z) => z.remove());
-  if (asleep) { const z = el("div", "zzz", "z z"); z.style.left = `calc(${x}% + 12px)`; scene.append(z); }
-  const steps = $("#tracker-steps");
-  steps.innerHTML = "";
-  for (const s of d.steps || []) {
-    const li = el("li", ["done", "active"].includes(s.state) ? s.state : "todo");
-    li.append(el("div", "dot"), el("span", null, s.label || ""));
-    steps.appendChild(li);
-  }
-  $("#tracker-updated").textContent = d.updated ? `Updated ${ago(d.updated)}` : "";
+  $("#build-title").textContent = d.title || "Current work";
+  $("#build-pct").textContent = pct + "%";
+  $("#build-meter").style.width = pct + "%";
+  $("#build-now").textContent = (done ? "Finished" : (d.current || "In progress")) + (d.updated ? ` · updated ${ago(d.updated)}` : "");
 }
 
 function renderPlan(plan) {
